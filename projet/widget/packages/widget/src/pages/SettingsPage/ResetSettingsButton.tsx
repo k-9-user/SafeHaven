@@ -1,0 +1,83 @@
+import InfoRounded from '@mui/icons-material/InfoRounded'
+import { Box, Button } from '@mui/material'
+import { useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Dialog } from '../../components/Dialog/Dialog.js'
+import {
+  DialogActions,
+  DialogContainer,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+} from '../../components/Dialog/Dialog.style.js'
+import { useSettingMonitor } from '../../hooks/useSettingMonitor.js'
+import { ResetButtonContainer } from './ResetSettingsButton.style.js'
+
+export const ResetSettingsButton: React.FC = () => {
+  const { t } = useTranslation()
+  const { isCustomRouteSettings, reset } = useSettingMonitor()
+  const [open, setOpen] = useState(false)
+
+  const toggleDialog = useCallback(() => {
+    setOpen((open) => !open)
+  }, [])
+
+  const handleReset = () => {
+    reset()
+    toggleDialog()
+  }
+
+  if (!isCustomRouteSettings) {
+    return null
+  }
+
+  return (
+    <Box
+      sx={{
+        mt: 2,
+      }}
+    >
+      <ResetButtonContainer>
+        <Box
+          sx={{
+            display: 'flex',
+            marginBottom: '12px',
+          }}
+        >
+          <InfoRounded
+            sx={{
+              marginRight: '8px',
+            }}
+          />
+          <Box
+            sx={{
+              fontSize: 14,
+            }}
+          >
+            {t('settings.resetSettings')}
+          </Box>
+        </Box>
+        <Button onClick={toggleDialog} fullWidth>
+          {t('button.resetSettings')}
+        </Button>
+
+        <Dialog open={open} onClose={toggleDialog}>
+          <DialogContainer>
+            <DialogTitle>{t('warning.title.resetSettings')}</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                {t('warning.message.resetSettings')}
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={toggleDialog}>{t('button.cancel')}</Button>
+              <Button variant="contained" onClick={handleReset} autoFocus>
+                {t('button.reset')}
+              </Button>
+            </DialogActions>
+          </DialogContainer>
+        </Dialog>
+      </ResetButtonContainer>
+    </Box>
+  )
+}

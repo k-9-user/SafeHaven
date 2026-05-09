@@ -1,0 +1,98 @@
+import { parseUnits, type RouteExtended } from '@lifi/sdk'
+import { useAccount } from '@lifi/wallet-management'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useSDKClient } from '../providers/SDKClientProvider.js'
+import { useWidgetConfig } from '../providers/WidgetProvider/WidgetProvider.js'
+import { useFieldValues } from '../stores/form/useFieldValues.js'
+import { isRouteDone } from '../stores/routes/utils.js'
+import { getQueryKey } from '../utils/queries.js'
+import { useTokenAddressBalance } from './useTokenAddressBalance.js'
+import { getTokenBalancesWithRetry } from './useTokenBalance.js'
+
+const refetchInterval = 30_000
+
+export const useFromTokenSufficiency = (
+  route?: RouteExtended
+): {
+  insufficientFromToken: boolean | undefined
+  isLoading: boolean
+} => {
+  const [fromChainId, fromTokenAddress, fromAmount] = useFieldValues(
+    'fromChain',
+    'fromToken',
+    'fromAmount'
+  )
+  const { keyPrefix } = useWidgetConfig()
+  const sdkClient = useSDKClient()
+
+  let chainId = fromChainId
+  let tokenAddress = fromTokenAddress
+  if (route) {
+    chainId = route.fromToken.chainId
+    tokenAddress = route.fromToken.address
+  }
+
+  const {
+    token,
+    chain,
+    isLoading: isTokenAddressBalanceLoading,
+  } = useTokenAddressBalance(chainId, tokenAddress)
+
+  const { account } = useAccount({ chainType: chain?.chainType })
+
+  const { data: insufficientFromToken, isLoading } = useQuery({
+    queryKey: [
+      getQueryKey('from-token-sufficiency-check', keyPrefix),
+      account.address,
+      chainId,
+      tokenAddress,
+      route?.id ?? fromAmount,
+    ] as const,
+    queryFn: async ({ queryKey: [, accountAddress] }) => {
+      if (!accountAddress || !token) {
+        return
+      }
+      const parsedFromAmount = parseUnits(fromAmount, token.decimals)
+      let currentTokenBalance = token.amount ?? 0n
+
+      if (!route || isRouteDone(route)) {
+        const insufficientFunds = currentTokenBalance < parsedFromAmount
+        return insufficientFunds
+      }
+
+      const currentAction = route.steps.filter(
+        (step) => !step.execution || step.execution.status !== 'DONE'
+      )[0]?.action
+
+      if (
+        token.chainId === currentAction.fromToken.chainId &&
+        token.address === currentAction.fromToken.address &&
+        currentTokenBalance > 0
+      ) {
+        const insufficientFunds = BigInt(route.fromAmount) > currentTokenBalance
+        return insufficientFunds
+      }
+
+      const tokenBalances = await getTokenBalancesWithRetry(
+        sdkClient,
+        accountAddress,
+        [currentAction.fromToken]
+      )
+
+      currentTokenBalance = tokenBalances?.[0]?.amount ?? 0n
+      const insufficientFunds =
+        BigInt(currentAction.fromAmount) > currentTokenBalance
+      return insufficientFunds
+    },
+
+    enabled: Boolean(account.address && token && !isTokenAddressBalanceLoading),
+    refetchInterval,
+    staleTime: refetchInterval,
+    placeholderData: account.address ? keepPreviousData : undefined,
+  })
+
+  return {
+    insufficientFromToken,
+    isLoading,
+  }
+}

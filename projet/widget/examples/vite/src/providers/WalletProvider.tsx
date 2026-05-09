@@ -1,0 +1,35 @@
+import { useSyncWagmiConfig } from '@lifi/widget-provider-ethereum'
+import { injected, walletConnect } from '@wagmi/connectors'
+import { type FC, type PropsWithChildren, useRef } from 'react'
+import { createClient, http } from 'viem'
+import { mainnet } from 'viem/chains'
+import type { Config } from 'wagmi'
+import { createConfig, WagmiProvider } from 'wagmi'
+import { useChains } from '../hooks/useChains'
+
+const projectId = import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID
+
+const connectors = [injected(), walletConnect({ projectId })]
+
+export const WalletProvider: FC<PropsWithChildren> = ({ children }) => {
+  const { evmChains } = useChains()
+  const wagmi = useRef<Config>(null)
+
+  if (!wagmi.current) {
+    wagmi.current = createConfig({
+      chains: [mainnet],
+      client({ chain }) {
+        return createClient({ chain, transport: http() })
+      },
+      ssr: true,
+    })
+  }
+
+  useSyncWagmiConfig(wagmi.current, connectors, evmChains)
+
+  return (
+    <WagmiProvider config={wagmi.current} reconnectOnMount={false}>
+      {children}
+    </WagmiProvider>
+  )
+}
