@@ -26,6 +26,8 @@ import * as Localization from 'expo-localization';
 
 import { initI18n } from '@i18n/index';
 import { AppNavigator } from '@navigation/AppNavigator';
+import { ThemeProvider } from '@design/Theme';
+import { VoiceAgent } from '@voice/VoiceAgent';
 import { useAccessibilityStore } from '@store/accessibilityStore';
 
 // Keep splash visible while we initialize
@@ -88,15 +90,18 @@ export default function App(): React.ReactElement | null {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <StatusBar
-          barStyle="light-content"
-          backgroundColor="#2563EB"
-          translucent={false}
-        />
-        <AppNavigator />
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ThemeProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <StatusBar
+            barStyle="light-content"
+            backgroundColor="#2563EB"
+            translucent={false}
+          />
+          <AppNavigator />
+          <VoiceAgent defaultMode="both" />
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ThemeProvider>
   );
 }

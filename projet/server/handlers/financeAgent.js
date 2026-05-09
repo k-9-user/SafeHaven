@@ -134,7 +134,7 @@ export async function synthesizeFinanceVoice(req, res) {
       });
     }
 
-    const selectedVoiceId = voiceId || process.env.ELEVENLABS_VOICE_ID || 'EXAVITQu4vr4xnSDxMaL';
+    const selectedVoiceId = voiceId || process.env.ELEVENLABS_VOICE_ID || 'VMTRU6n4ozl5SzXToh9l';
     const trimmedText = text.slice(0, 1400);
 
     const response = await fetch(

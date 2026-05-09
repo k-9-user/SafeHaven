@@ -9,9 +9,11 @@ const INITIAL_MESSAGES = [
   {
     id: 1,
     role: 'assistant',
-    text: 'Pose ta question finance. Je peux aussi répondre à voix haute avec ElevenLabs si la clé API est configurée.',
+    text: 'Pose ta question finance. La réponse vocale peut aussi fonctionner localement dans ton navigateur.',
   },
 ];
+
+const ELEVENLABS_VOICE_ID = 'VMTRU6n4ozl5SzXToh9l';
 
 function getSpeechRecognition() {
   const win = window;
@@ -83,11 +85,20 @@ export default function VoiceFinanceCoach() {
   };
 
   const playVoice = async (text) => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'fr-FR';
+      window.speechSynthesis.speak(utterance);
+      setStatusText('Lecture vocale locale en cours.');
+      return;
+    }
+
     try {
       const response = await fetch('/api/finance-agent/voice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, voiceId: ELEVENLABS_VOICE_ID }),
       });
 
       if (!response.ok) {
@@ -161,10 +172,10 @@ export default function VoiceFinanceCoach() {
       const fallback = {
         id: Date.now() + 1,
         role: 'assistant',
-        text: 'Je ne peux pas joindre le service IA pour le moment. Continue avec emergency fund, diversification et conversion defensive en USDC.',
+        text: 'Mode local actif. Commence par un fonds d urgence, garde une partie en USDC et évite de tout concentrer sur un seul actif.',
       };
       setMessages((previous) => [...previous, fallback]);
-      setStatusText('Mode secours active.');
+      setStatusText('Mode local actif.');
     } finally {
       setIsSending(false);
       stopListening();
@@ -178,7 +189,7 @@ export default function VoiceFinanceCoach() {
           <div>
             <CardTitle className="text-slate-900">Coach IA vocal</CardTitle>
             <CardDescription>
-              Pose des questions finance en texte ou a la voix. Reponse vocale via ElevenLabs quand disponible.
+              Pose des questions finance en texte ou a la voix. Le navigateur peut parler sans ElevenLabs.
             </CardDescription>
           </div>
           <Badge variant="outline" className="rounded-md border-cyan-200 bg-cyan-50 text-cyan-700">

@@ -5,13 +5,14 @@
  * Built with Express, secured with Helmet + rate-limiting.
  *
  * Routes:
- *   POST /api/chat            → AI chat (Claude, streaming)
- *   POST /api/risk-profile    → Save/update risk profile
- *   GET  /api/strategies      → Available strategies for risk tier
- *   GET  /api/yields          → Current protocol APY snapshot
- *   POST /api/voice/synthesize → ElevenLabs TTS proxy
- *   POST /api/voice/transcribe → Audio transcription
- *   GET  /health              → Health check
+ *   POST /api/chat              → AI chat (Claude, streaming)
+ *   POST /api/chat/summarize    → Compress older turns into summary paragraph
+ *   POST /api/risk-profile      → Save/update risk profile
+ *   GET  /api/strategies        → Available strategies for risk tier
+ *   GET  /api/yields            → Current protocol APY snapshot
+ *   POST /api/voice/synthesize  → ElevenLabs TTS proxy
+ *   POST /api/voice/transcribe  → Audio transcription
+ *   GET  /health                → Health check
  */
 
 import 'dotenv/config';
@@ -21,6 +22,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 
 import { chatRouter } from './routes/chat.js';
+import { memoryRouter } from './llm/memory.js';
 import { riskRouter } from './routes/risk.js';
 import { strategyRouter } from './routes/strategies.js';
 import { voiceRouter } from './routes/voice.js';
@@ -86,6 +88,7 @@ app.use(express.urlencoded({ extended: false, limit: '512kb' }));
 // ─── Routes ─────────────────────────────────────────────────────────────────
 
 app.use('/api/chat', chatLimiter, chatRouter);
+app.use('/api/chat', chatLimiter, memoryRouter);   // POST /api/chat/summarize
 app.use('/api/risk-profile', riskRouter);
 app.use('/api/strategies', strategyRouter);
 app.use('/api/yields', yieldsRouter);

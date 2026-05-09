@@ -2,7 +2,6 @@
  * POST /api/risk-profile — Save or update a user's risk profile
  */
 import { Router, type Request, type Response } from 'express';
-import { z } from 'zod';
 import { RiskProfileSchema, computeRiskScore } from '../risk/profiler.js';
 
 export const riskRouter = Router();
