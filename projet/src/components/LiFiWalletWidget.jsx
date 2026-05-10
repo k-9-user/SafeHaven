@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LiFiWidget } from '@lifi/widget';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { WalletCards } from 'lucide-react';
+
+const SOLANA_CHAIN_ID = 1151111081099710;
+const SOL_TOKEN_ADDRESS = 'So11111111111111111111111111111111111111112';
+const SOLANA_USDC_ADDRESS = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
 
 function IsolatedLiFiWidget({ config }) {
   const mountRef = useRef(null);
@@ -19,7 +22,7 @@ function IsolatedLiFiWidget({ config }) {
     };
   }, [config]);
 
-  return <div ref={mountRef} className="min-h-[600px] w-full rounded-lg" />;
+  return <div ref={mountRef} className="safehaven-lifi-widget min-h-[600px] w-full rounded-lg" />;
 }
 
 export default function LiFiWalletWidget() {
@@ -28,6 +31,27 @@ export default function LiFiWalletWidget() {
   const widgetConfig = useMemo(
     () => ({
       appearance: 'light',
+      fromChain: SOLANA_CHAIN_ID,
+      toChain: SOLANA_CHAIN_ID,
+      fromToken: SOL_TOKEN_ADDRESS,
+      toToken: SOLANA_USDC_ADDRESS,
+      fromAmount: '0.25',
+      languageResources: {
+        en: {
+          button: {
+            connectWallet: 'Exchange when funds are sufficient',
+            connectChainWallet: 'Exchange when funds are sufficient',
+            exchange: 'Exchange and proceed',
+            swapReview: 'Review exchange',
+            startSwapping: 'Proceed with exchange',
+          },
+          info: {
+            message: {
+              missingRouteRequiredAccount: '',
+            },
+          },
+        },
+      },
       theme: {
         container: {
           border: '1px solid #dbeafe',
@@ -47,7 +71,14 @@ export default function LiFiWalletWidget() {
   );
 
   return (
-    <div className="rounded-lg bg-gradient-to-b from-blue-50 to-blue-100 p-4 sm:p-6">
+    <div className="safehaven-lifi-widget-shell rounded-lg bg-gradient-to-b from-blue-50 to-blue-100 p-4 sm:p-6">
+      <style>
+        {`
+          .safehaven-lifi-widget-shell .safehaven-lifi-widget .MuiCollapse-root:has([data-testid="WalletIcon"]) {
+            display: none !important;
+          }
+        `}
+      </style>
       <Card className="border-2 border-blue-400 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg">
         <CardHeader className="border-b border-blue-200 bg-white/75">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -64,9 +95,6 @@ export default function LiFiWalletWidget() {
                 </CardDescription>
               </div>
             </div>
-            <Badge variant="outline" className="rounded-md border-blue-200 bg-white text-blue-800">
-              Route-ready
-            </Badge>
           </div>
         </CardHeader>
         <CardContent className="p-3 sm:p-4">

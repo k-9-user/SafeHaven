@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   BookOpen,
-  Wallet,
   Lock,
   ShieldCheck,
   Sparkles,
@@ -21,7 +20,6 @@ import {
   Medal,
 } from 'lucide-react';
 import MarketMonitor from '../components/MarketMonitor';
-import SolanaTradingDesk from '../components/SolanaTradingDesk';
 import VoiceFinanceCoach from '../components/VoiceFinanceCoach';
 import COURSES from '@/data/coursesData';
 import {
@@ -57,11 +55,11 @@ export default function EducationalHub() {
 
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window === 'undefined') return 'education';
-    return window.sessionStorage.getItem('safehaven-active-tab') || 'education';
+    const savedTab = window.sessionStorage.getItem('safehaven-active-tab');
+    return savedTab === 'platform' ? 'platform' : 'education';
   });
   const [walletAddress, setWalletAddress] = useState(null);
   const [solanaBalance, setSolanaBalance] = useState(12.5);
-  const [guardMessage, setGuardMessage] = useState('AI guard armed');
   const [selectedCourseIndex, setSelectedCourseIndex] = useState(0);
   const [selectedLessonIndex, setSelectedLessonIndex] = useState(0);
   const [quizResult, setQuizResult] = useState(null);
@@ -71,18 +69,24 @@ export default function EducationalHub() {
   useEffect(() => {
     if (solanaAddress && solanaAddress !== walletAddress) {
       setWalletAddress(solanaAddress);
-      setGuardMessage('Live Phantom wallet connected');
     }
   }, [solanaAddress, walletAddress]);
 
   useEffect(() => {
     const section = location.hash.replace('#', '');
-    if (section === 'education' || section === 'wallet' || section === 'platform') {
+    if (section === 'education' || section === 'platform') {
       setActiveTab(section);
       if (typeof window !== 'undefined') {
         window.sessionStorage.setItem('safehaven-active-tab', section);
       }
       return;
+    }
+
+    if (section === 'wallet') {
+      setActiveTab('platform');
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem('safehaven-active-tab', 'platform');
+      }
     }
   }, [location.hash]);
 
@@ -101,9 +105,7 @@ export default function EducationalHub() {
   const currentScore = getLessonScore(currentCourse.id, currentLesson.id);
   const currentScoreSummary = getCourseScoreSummary(currentCourse.id);
   const currentLessonRead = isLessonRead(currentCourse.id, currentLesson.id);
-  const isDemoWallet = Boolean(walletAddress && walletAddress.startsWith('DEMO-'));
   const platformWalletAddress = walletAddress || 'DEMO-SAFEHAVEN-PLATFORM';
-  const platformDemoMode = !walletAddress || isDemoWallet;
 
   const playfulModules = [
     {
@@ -169,15 +171,8 @@ export default function EducationalHub() {
       slippageBps: 50,
     });
 
-    setGuardMessage(`Protected in USDC: ${result.estimatedOutputUsdc.toFixed(2)} USDC`);
     setSolanaBalance((previous) => Math.max(0, previous - Number(solAmount || 0)));
     return result;
-  };
-
-  const handleTradeComplete = (result) => {
-    if (!result?.estimatedInputSol) return;
-    setSolanaBalance((previous) => Math.max(0, previous - result.estimatedInputSol));
-    setGuardMessage('Trade completed and protected on Solana');
   };
 
   return (
@@ -213,12 +208,9 @@ export default function EducationalHub() {
           }}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-3 bg-slate-900/95 p-1 text-white">
+          <TabsList className="grid w-full grid-cols-2 bg-slate-900/95 p-1 text-white">
             <TabsTrigger value="education" className="min-w-0 gap-1 px-1 text-[11px] sm:gap-2 sm:text-sm data-[state=active]:bg-cyan-400 data-[state=active]:text-slate-950">
               <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Education
-            </TabsTrigger>
-            <TabsTrigger value="wallet" className="min-w-0 gap-1 px-1 text-[11px] sm:gap-2 sm:text-sm data-[state=active]:bg-cyan-400 data-[state=active]:text-slate-950">
-              <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Wallet
             </TabsTrigger>
             <TabsTrigger value="platform" className="min-w-0 gap-1 px-1 text-[11px] sm:gap-2 sm:text-sm data-[state=active]:bg-cyan-400 data-[state=active]:text-slate-950">
               <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Platform
@@ -416,57 +408,17 @@ export default function EducationalHub() {
 
           </TabsContent>
 
-          <TabsContent value="wallet" className="mt-6 space-y-6">
-            <Suspense fallback={<LiFiWalletWidgetFallback />}>
-              <LiFiWalletWidget />
-            </Suspense>
-          </TabsContent>
-
           <TabsContent value="platform" className="mt-6 space-y-6">
-            <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
+            <div className="space-y-6">
               <MarketMonitor
                 walletAddress={platformWalletAddress}
                 solanaBalance={solanaBalance}
                 onAutoSecure={handleAutoSecure}
               />
 
-              <div className="space-y-6">
-                <SolanaTradingDesk
-                  walletAddress={platformWalletAddress}
-                  solanaBalance={solanaBalance}
-                  demoMode={platformDemoMode}
-                  onTradeComplete={handleTradeComplete}
-                  onTradeStatus={setGuardMessage}
-                />
-
-                <Card className="border-slate-200 bg-slate-950 text-white shadow-2xl">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-white">
-                      <ShieldCheck className="h-5 w-5 text-cyan-300" /> AI Protection Layer
-                    </CardTitle>
-                    <CardDescription className="text-slate-300">
-                      The guard watches the market and converts assets to USDC on Solana when risk increases.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Guard status</p>
-                      <p className="mt-2 font-semibold text-cyan-300">
-                        {platformDemoMode ? 'Demo guard active. Connect a wallet in LI.FI for live execution.' : guardMessage}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                      <p className="mb-2 font-semibold text-white">What the AI does</p>
-                      <ul className="space-y-2">
-                        <li>• Watches market movements around the clock</li>
-                        <li>• Detects volatility and downside pressure</li>
-                        <li>• Secures SOL into USDC on Solana when needed</li>
-                      </ul>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              <Suspense fallback={<LiFiWalletWidgetFallback />}>
+                <LiFiWalletWidget />
+              </Suspense>
             </div>
           </TabsContent>
         </Tabs>

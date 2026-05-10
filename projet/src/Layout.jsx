@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Wallet, ShieldCheck, Menu, X } from 'lucide-react';
+import { BookOpen, ShieldCheck, Menu, X } from 'lucide-react';
 
 const NAV_ITEMS = [
   { id: 'education', label: 'EDUCATION', icon: BookOpen },
-  { id: 'wallet', label: 'WALLET', icon: Wallet },
   { id: 'platform', label: 'PLATFORM', icon: ShieldCheck },
 ];
 
@@ -79,13 +78,6 @@ export default function Layout({ children }) {
             </div>
 
             <div className="flex items-center gap-2 md:hidden">
-              <button
-                type="button"
-                onClick={() => navigateToSection(activeSection)}
-                className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700"
-              >
-                Open
-              </button>
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setMobileMenuOpen((value) => !value)}
