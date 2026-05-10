@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Wallet, Check, AlertCircle, ExternalLink } from 'lucide-react';
+import { Wallet, Check, AlertCircle, ExternalLink, Smartphone } from 'lucide-react';
 
-export default function WalletSelector({ onWalletSelect, selectedWallet, onConnect }) {
+export default function WalletSelector({ onWalletSelect, onConnect }) {
   const [error, setError] = useState(null);
   const [connecting, setConnecting] = useState(false);
   const phantomProvider = typeof window !== 'undefined' ? /** @type {any} */ (window).solana : undefined;
@@ -14,41 +14,41 @@ export default function WalletSelector({ onWalletSelect, selectedWallet, onConne
     {
       id: 'phantom',
       name: 'Phantom',
-      icon: '👻',
-      description: 'Most popular Solana wallet',
+      icon: Wallet,
+      description: 'Solana wallet with Mobile Wallet Adapter support on Android Chrome',
       downloadUrl: 'https://phantom.app/',
-      color: 'from-purple-600 to-blue-600',
-      colorBorder: 'border-purple-400',
+      color: 'from-blue-700 to-cyan-600',
+      colorBorder: 'border-blue-400',
       installed: !!phantomProvider?.isPhantom,
     },
     {
-      id: 'magic-eden',
-      name: 'Magic Eden',
-      icon: '✨',
-      description: 'Web3 wallet & NFT marketplace',
-      downloadUrl: 'https://www.magiceden.io/',
-      color: 'from-pink-600 to-orange-600',
-      colorBorder: 'border-pink-400',
+      id: 'solana-mobile',
+      name: 'Solana Mobile',
+      icon: Smartphone,
+      description: 'Android MWA path for Seeker/Saga-style mobile signing',
+      downloadUrl: 'https://docs.solanamobile.com/mobile-wallet-adapter/mobile-apps',
+      color: 'from-slate-900 to-blue-700',
+      colorBorder: 'border-cyan-400',
       installed: false,
     },
     {
       id: 'solflare',
       name: 'Solflare',
-      icon: '🔥',
-      description: 'Fast & secure Solana wallet',
+      icon: Wallet,
+      description: 'MWA-compatible Solana wallet',
       downloadUrl: 'https://solflare.com/',
-      color: 'from-orange-600 to-yellow-600',
-      colorBorder: 'border-orange-400',
+      color: 'from-blue-600 to-sky-500',
+      colorBorder: 'border-sky-400',
       installed: false,
     },
     {
-      id: 'ledger',
-      name: 'Ledger Live',
-      icon: '🔐',
-      description: 'Hardware wallet security',
-      downloadUrl: 'https://www.ledger.com/',
-      color: 'from-green-600 to-emerald-600',
-      colorBorder: 'border-green-400',
+      id: 'demo',
+      name: 'Guided Demo',
+      icon: Check,
+      description: 'Try the full education and protection flow without funds',
+      downloadUrl: 'https://docs.solana.com/wallet-guide',
+      color: 'from-emerald-600 to-cyan-600',
+      colorBorder: 'border-emerald-400',
       installed: false,
     },
   ];
@@ -71,13 +71,13 @@ export default function WalletSelector({ onWalletSelect, selectedWallet, onConne
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 p-6">
+    <div className="rounded-lg bg-gradient-to-b from-blue-50 to-blue-100 p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="mb-8 text-center"
         >
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full mb-4 border-4 border-white shadow-lg">
             <Wallet className="w-8 h-8 text-white" />
@@ -109,7 +109,9 @@ export default function WalletSelector({ onWalletSelect, selectedWallet, onConne
 
         {/* Wallet Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {wallets.map((wallet, index) => (
+          {wallets.map((wallet, index) => {
+            const Icon = wallet.icon;
+            return (
             <motion.div
               key={wallet.id}
               initial={{ opacity: 0, scale: 0.9 }}
@@ -133,11 +135,10 @@ export default function WalletSelector({ onWalletSelect, selectedWallet, onConne
                 <CardHeader>
                   <div className="flex items-center gap-4 mb-2">
                     <motion.div
-                      animate={{ rotate: [0, 10, -10, 0] }}
-                      transition={{ duration: 3, repeat: Infinity }}
-                      className="text-4xl"
+                      whileHover={{ scale: 1.04 }}
+                      className="flex h-12 w-12 items-center justify-center rounded-lg bg-white/90 text-blue-800"
                     >
-                      {wallet.icon}
+                      <Icon className="h-6 w-6" />
                     </motion.div>
                     <div>
                       <CardTitle className="text-2xl text-blue-900">
@@ -225,7 +226,8 @@ export default function WalletSelector({ onWalletSelect, selectedWallet, onConne
                 </CardContent>
               </Card>
             </motion.div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Info Section */}
@@ -236,28 +238,28 @@ export default function WalletSelector({ onWalletSelect, selectedWallet, onConne
         >
           <Card className="bg-blue-900/10 border-2 border-blue-400">
             <CardHeader>
-              <CardTitle className="text-blue-900">💡 Why Connect a Wallet?</CardTitle>
+              <CardTitle className="text-blue-900">Why connect a wallet?</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex gap-3">
-                <span className="text-2xl">🔐</span>
+                <Wallet className="mt-1 h-5 w-5 text-blue-700" />
                 <div>
                   <p className="font-bold text-blue-900">Secure</p>
                   <p className="text-blue-700 text-sm">Your private keys stay with you, never shared</p>
                 </div>
               </div>
               <div className="flex gap-3">
-                <span className="text-2xl">💰</span>
+                <Check className="mt-1 h-5 w-5 text-blue-700" />
                 <div>
                   <p className="font-bold text-blue-900">Complete Transactions</p>
                   <p className="text-blue-700 text-sm">Send payments and mint NFTs on Solana</p>
                 </div>
               </div>
               <div className="flex gap-3">
-                <span className="text-2xl">⭐</span>
+                <Smartphone className="mt-1 h-5 w-5 text-blue-700" />
                 <div>
-                  <p className="font-bold text-blue-900">Earn Rewards</p>
-                  <p className="text-blue-700 text-sm">Unlock achievements and NFT badges</p>
+                  <p className="font-bold text-blue-900">Mobile-ready</p>
+                  <p className="text-blue-700 text-sm">Built around Solana Mobile Wallet Adapter readiness</p>
                 </div>
               </div>
             </CardContent>
@@ -274,7 +276,7 @@ export default function WalletSelector({ onWalletSelect, selectedWallet, onConne
           <Alert className="bg-orange-100 border-2 border-orange-400">
             <AlertCircle className="h-4 w-4 text-orange-600" />
             <AlertDescription className="text-orange-600">
-              <strong>⚠️ Devnet Mode:</strong> Make sure your wallet is set to <strong>Solana Devnet</strong> for testing. No real funds are used.
+              <strong>Demo safety:</strong> Use Guided Demo for judging and onboarding. Live swaps require explicit wallet approval and real funds.
             </AlertDescription>
           </Alert>
         </motion.div>

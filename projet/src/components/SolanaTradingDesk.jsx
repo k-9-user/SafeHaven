@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowRightLeft, ShieldCheck, Sparkles, TriangleAlert, CheckCircle2 } from 'lucide-react';
+import { ArrowRightLeft, ShieldCheck, Sparkles, TriangleAlert } from 'lucide-react';
 import { executeJupiterSwap, formatSwapAmount } from '@/lib/jupiterSwap';
+import { getLifiSolanaUsdcQuote } from '@/lib/lifiRoutes';
 
 export default function SolanaTradingDesk({
   walletAddress,
@@ -20,6 +21,7 @@ export default function SolanaTradingDesk({
   const [status, setStatus] = useState('Ready to trade');
   const [txHash, setTxHash] = useState('');
   const [estimate, setEstimate] = useState(null);
+  const [routeSource, setRouteSource] = useState('LI.FI route pending');
 
   const availableAmount = useMemo(() => {
     const parsed = Number(tradeAmount || 0);
@@ -50,15 +52,31 @@ export default function SolanaTradingDesk({
 
     try {
       setIsTrading(true);
-      updateStatus(demoMode ? 'Demo secure flow running...' : 'Requesting Jupiter quote...');
+      updateStatus(demoMode ? 'Demo secure flow running...' : 'Requesting LI.FI Solana route...');
 
       if (demoMode) {
         const fakeHash = `demo-${Date.now().toString(36)}`;
         await new Promise((resolve) => setTimeout(resolve, 1200));
         setTxHash(fakeHash);
         setEstimate({ input: availableAmount, output: availableAmount * 141.25, impact: 0.05 });
+        setRouteSource('LI.FI demo route: SOL to USDC on Solana');
         updateStatus('Demo mode: assets secured conceptually into USDC');
       } else {
+        const lifiQuote = await getLifiSolanaUsdcQuote({
+          walletAddress,
+          amountSol: availableAmount,
+          slippage: Number(slippageBps || 50) / 10000,
+        });
+        setRouteSource(`LI.FI route via ${lifiQuote.tool}`);
+        setEstimate({
+          input: availableAmount,
+          output: lifiQuote.toAmount,
+          minOutput: lifiQuote.toAmountMin,
+          impact: 0,
+          duration: lifiQuote.executionDuration,
+        });
+        updateStatus('LI.FI route found. Requesting wallet signature on Solana...');
+
         const result = await executeJupiterSwap({
           walletAddress,
           amountSol: availableAmount,
@@ -70,7 +88,7 @@ export default function SolanaTradingDesk({
           output: result.estimatedOutputUsdc,
           impact: result.priceImpactPct,
         });
-        updateStatus('Trade executed through Jupiter and secured on Solana');
+        updateStatus('Trade executed on Solana and secured into USDC');
         if (onTradeComplete) onTradeComplete(result);
       }
     } catch (error) {
@@ -88,10 +106,10 @@ export default function SolanaTradingDesk({
           <div>
             <CardTitle className="flex items-center gap-2 text-white">
               <ArrowRightLeft className="h-5 w-5 text-cyan-300" />
-              Trading Desk
+              LI.FI Protection Desk
             </CardTitle>
             <CardDescription className="text-slate-300">
-              Convert SOL to USDC through Jupiter with real wallet signing or demo mode.
+              Preview a LI.FI Solana route, then sign a SOL to USDC protection swap.
             </CardDescription>
           </div>
           <Badge className={demoMode ? 'bg-yellow-500 text-slate-950' : 'bg-emerald-500 text-white'}>
@@ -170,8 +188,9 @@ export default function SolanaTradingDesk({
             <div className="mt-2 grid gap-2 md:grid-cols-3">
               <div>Input: {formatSwapAmount(estimate.input)} SOL</div>
               <div>Output: {estimate.output.toFixed(2)} USDC</div>
-              <div>Impact: {Number(estimate.impact || 0).toFixed(2)}%</div>
+              <div>Minimum: {(estimate.minOutput || estimate.output).toFixed(2)} USDC</div>
             </div>
+            <p className="mt-2 text-xs text-slate-500">{routeSource}</p>
           </div>
         )}
 
@@ -180,7 +199,7 @@ export default function SolanaTradingDesk({
           disabled={isTrading || !walletAddress}
           className="w-full bg-slate-950 text-white hover:bg-slate-800"
         >
-          {isTrading ? 'Executing...' : demoMode ? 'Run demo secure trade' : 'Swap SOL to USDC'}
+          {isTrading ? 'Executing...' : demoMode ? 'Run demo LI.FI route' : 'Preview route and swap'}
         </Button>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-4">

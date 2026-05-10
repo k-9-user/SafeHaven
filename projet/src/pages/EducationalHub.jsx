@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,7 +20,6 @@ import {
   PlayCircle,
   Medal,
 } from 'lucide-react';
-import WalletSelector from '../components/WalletSelector';
 import MarketMonitor from '../components/MarketMonitor';
 import SolanaTradingDesk from '../components/SolanaTradingDesk';
 import VoiceFinanceCoach from '../components/VoiceFinanceCoach';
@@ -36,14 +35,31 @@ import {
 import { useSolana } from '../hooks/useSolana';
 import { executeJupiterSwap } from '@/lib/jupiterSwap';
 
+const LiFiWalletWidget = lazy(() => import('../components/LiFiWalletWidget'));
+
+function LiFiWalletWidgetFallback() {
+  return (
+    <Card className="border-blue-200 bg-white shadow-lg">
+      <CardHeader>
+        <CardTitle className="text-blue-950">LI.FI Wallet Connect</CardTitle>
+        <CardDescription>Loading wallet connection tools...</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="min-h-[360px] animate-pulse rounded-lg bg-blue-50" />
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function EducationalHub() {
   const location = useLocation();
-  const { address: solanaAddress, connectSolana, disconnect: disconnectSolana } = useSolana();
+  const { address: solanaAddress } = useSolana();
 
-  const [activeTab, setActiveTab] = useState('education');
-  const [selectedWallet, setSelectedWallet] = useState(null);
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === 'undefined') return 'education';
+    return window.sessionStorage.getItem('safehaven-active-tab') || 'education';
+  });
   const [walletAddress, setWalletAddress] = useState(null);
-  const [walletLabel, setWalletLabel] = useState('No wallet connected');
   const [solanaBalance, setSolanaBalance] = useState(12.5);
   const [guardMessage, setGuardMessage] = useState('AI guard armed');
   const [selectedCourseIndex, setSelectedCourseIndex] = useState(0);
@@ -55,8 +71,6 @@ export default function EducationalHub() {
   useEffect(() => {
     if (solanaAddress && solanaAddress !== walletAddress) {
       setWalletAddress(solanaAddress);
-      setWalletLabel('Phantom');
-      setSelectedWallet('phantom');
       setGuardMessage('Live Phantom wallet connected');
     }
   }, [solanaAddress, walletAddress]);
@@ -65,6 +79,10 @@ export default function EducationalHub() {
     const section = location.hash.replace('#', '');
     if (section === 'education' || section === 'wallet' || section === 'platform') {
       setActiveTab(section);
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.setItem('safehaven-active-tab', section);
+      }
+      return;
     }
   }, [location.hash]);
 
@@ -84,39 +102,41 @@ export default function EducationalHub() {
   const currentScoreSummary = getCourseScoreSummary(currentCourse.id);
   const currentLessonRead = isLessonRead(currentCourse.id, currentLesson.id);
   const isDemoWallet = Boolean(walletAddress && walletAddress.startsWith('DEMO-'));
+  const platformWalletAddress = walletAddress || 'DEMO-SAFEHAVEN-PLATFORM';
+  const platformDemoMode = !walletAddress || isDemoWallet;
 
   const playfulModules = [
     {
       title: 'Mission USDC',
-      description: 'Protege une partie de ton capital avec une logique simple et visuelle.',
+      description: 'Protect part of your capital with a simple visual rule.',
       badge: '5 min',
       icon: ShieldCheck,
     },
     {
-      title: 'Bonus Budget',
-      description: 'Choisis quoi couper pour liberer plus de marge de securite.',
+      title: 'Budget Boost',
+      description: 'Choose what to reduce so you can build a stronger safety margin.',
       badge: 'Quiz',
       icon: Trophy,
     },
     {
-      title: 'Roulette Risque',
-      description: 'Decide quand garder, epargner ou convertir selon le scenario.',
+      title: 'Risk Wheel',
+      description: 'Decide when to hold cash, save, or convert based on the scenario.',
       badge: 'Game',
       icon: Dice6,
     },
     {
-      title: 'Streak semaine',
-      description: 'Enchaine de petites victoires pour debloquer des badges SafeHaven.',
+      title: 'Weekly Streak',
+      description: 'Stack small wins to unlock SafeHaven badges.',
       badge: 'Streak',
       icon: Flame,
     },
   ];
 
   const dailyChallenges = [
-    'Explique en une phrase ce que veut dire emergency fund.',
-    'Repere la meilleure habitude pour proteger 20$ de revenus.',
-    'Choisis une action simple pour reduire ton risque aujourd hui.',
-    'Dis quand il faut garder du cash au lieu de chercher du rendement.',
+    'Explain emergency fund in one sentence.',
+    'Spot the best habit for protecting $20 of income.',
+    'Choose one action that lowers your risk today.',
+    'Say when cash is safer than chasing yield.',
   ];
 
   const pathSteps = [
@@ -125,47 +145,6 @@ export default function EducationalHub() {
     { title: 'Protect capital', label: 'Stablecoin shield', done: getCourseProgress('market-protection').completed > 0 },
     { title: 'Wallet ready', label: 'Sign on chain', done: Boolean(walletAddress) },
   ];
-
-  const resources = [
-    {
-      title: 'AI Asset Guard',
-      description:
-        'The platform watches the market and can convert assets into USDC on Solana when downside risk rises.',
-      tips: ['Monitors market volatility', 'Protects capital automatically', 'Keeps funds in USDC when risk is high'],
-    },
-    {
-      title: 'Solana Wallet Layer',
-      description:
-        'Connect Phantom or use the demo mode to unlock the trading platform behind the education hub.',
-      tips: ['Fast settlement', 'Low transaction fees', 'Secure wallet signing'],
-    },
-  ];
-
-  const handleWalletConnect = async (walletId, options = {}) => {
-    setSelectedWallet(walletId);
-
-    if (options.demo || walletId !== 'phantom') {
-      const walletName = walletId === 'phantom' ? 'Phantom' : walletId;
-      const suffix = Math.random().toString(16).slice(2, 10).toUpperCase();
-      setWalletAddress(`DEMO-${walletName}-${suffix}`);
-      setWalletLabel(`${walletName} (demo)`);
-      setGuardMessage('Demo wallet connected');
-      return;
-    }
-
-    const realAddress = await connectSolana();
-    setWalletAddress(realAddress);
-    setWalletLabel('Phantom');
-    setGuardMessage('Live Phantom wallet connected');
-  };
-
-  const handleDisconnect = () => {
-    disconnectSolana();
-    setSelectedWallet(null);
-    setWalletAddress(null);
-    setWalletLabel('No wallet connected');
-    setGuardMessage('AI guard armed');
-  };
 
   const handleAutoSecure = async ({ walletAddress: currentWallet, solAmount, secureReason }) => {
     if (!currentWallet) {
@@ -202,38 +181,47 @@ export default function EducationalHub() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-slate-50 to-cyan-50 p-6">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-slate-50 to-cyan-50 p-4 sm:p-6">
       <div className="mx-auto max-w-7xl space-y-8">
-        <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-blue-900 to-cyan-900 p-8 text-white shadow-2xl">
+        <div className="rounded-lg bg-gradient-to-r from-slate-950 via-blue-900 to-cyan-900 p-6 text-white shadow-2xl md:p-8">
           <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div className="max-w-3xl space-y-4">
               <Badge variant="outline" className="w-fit border-white/20 bg-white/10 text-white">
-                SafeHaven Learning Mode
+                Mobile-first financial inclusion MVP
               </Badge>
-              <h1 className="text-4xl font-black md:text-6xl">Learn, then protect your capital with a guided path.</h1>
+              <h1 className="text-4xl font-black md:text-6xl">SafeHaven</h1>
               <p className="max-w-2xl text-sm leading-6 text-slate-200 md:text-base">
-                The education hub now follows a mastery path: one visible course room, real lesson content, quizzes,
-                and a gamified track that feels closer to a learning game than a static library.
+                A voice-accessible AI companion that helps beginners protect money, learn finance basics, and preview
+                safer Solana DeFi actions based on risk profile, amount, and goals.
               </p>
             </div>
             <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm md:min-w-72">
-              <div className="flex items-center gap-2 text-cyan-200"><Sparkles className="h-4 w-4" /> Guided progress</div>
-              <div className="flex items-center gap-2 text-cyan-200"><ShieldCheck className="h-4 w-4" /> Real lesson content</div>
-              <div className="flex items-center gap-2 text-cyan-200"><BookOpen className="h-4 w-4" /> Game-like learning path</div>
+              <div className="flex items-center gap-2 text-cyan-200"><Sparkles className="h-4 w-4" /> ElevenLabs-ready voice</div>
+              <div className="flex items-center gap-2 text-cyan-200"><ShieldCheck className="h-4 w-4" /> Solana wallet approval</div>
+              <div className="flex items-center gap-2 text-cyan-200"><BookOpen className="h-4 w-4" /> LI.FI route preview</div>
             </div>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => {
+            setActiveTab(value);
+            if (typeof window !== 'undefined') {
+              window.sessionStorage.setItem('safehaven-active-tab', value);
+            }
+          }}
+          className="w-full"
+        >
           <TabsList className="grid w-full grid-cols-3 bg-slate-900/95 p-1 text-white">
-            <TabsTrigger value="education" className="gap-2 data-[state=active]:bg-cyan-400 data-[state=active]:text-slate-950">
-              <BookOpen className="h-4 w-4" /> Education
+            <TabsTrigger value="education" className="min-w-0 gap-1 px-1 text-[11px] sm:gap-2 sm:text-sm data-[state=active]:bg-cyan-400 data-[state=active]:text-slate-950">
+              <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Education
             </TabsTrigger>
-            <TabsTrigger value="wallet" className="gap-2 data-[state=active]:bg-cyan-400 data-[state=active]:text-slate-950">
-              <Wallet className="h-4 w-4" /> Wallet
+            <TabsTrigger value="wallet" className="min-w-0 gap-1 px-1 text-[11px] sm:gap-2 sm:text-sm data-[state=active]:bg-cyan-400 data-[state=active]:text-slate-950">
+              <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Wallet
             </TabsTrigger>
-            <TabsTrigger value="platform" className="gap-2 data-[state=active]:bg-cyan-400 data-[state=active]:text-slate-950">
-              <Lock className="h-4 w-4" /> Platform
+            <TabsTrigger value="platform" className="min-w-0 gap-1 px-1 text-[11px] sm:gap-2 sm:text-sm data-[state=active]:bg-cyan-400 data-[state=active]:text-slate-950">
+              <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Platform
             </TabsTrigger>
           </TabsList>
 
@@ -244,13 +232,13 @@ export default function EducationalHub() {
               <CardHeader>
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <CardTitle className="text-slate-900">Progression style GitMastery</CardTitle>
+                    <CardTitle className="text-slate-900">Learning progression</CardTitle>
                     <CardDescription>
-                      Un parcours clair, des jalons visibles et un vrai contenu pédagogique derriere chaque etape.
+                      Clear milestones, real lessons, quizzes, and accessible beginner finance missions.
                     </CardDescription>
                   </div>
                   <Badge className="w-fit rounded-md bg-cyan-600 text-white hover:bg-cyan-600">
-                    Progression cours: {lessonProgressPercent}%
+                    Course progress: {lessonProgressPercent}%
                   </Badge>
                 </div>
               </CardHeader>
@@ -418,7 +406,7 @@ export default function EducationalHub() {
                   <div className="rounded-2xl border border-slate-200 bg-white p-4">
                     <div className="flex items-center gap-2 text-slate-900">
                       <Flame className="h-4 w-4 text-cyan-600" />
-                      <p className="font-semibold">Defi du moment</p>
+                      <p className="font-semibold">Current challenge</p>
                     </div>
                     <p className="mt-2 text-sm leading-6 text-slate-700">{dailyChallenges[dailyChallengeIndex]}</p>
                   </div>
@@ -426,133 +414,60 @@ export default function EducationalHub() {
               </CardContent>
             </Card>
 
-            <div className="grid gap-6 md:grid-cols-2">
-              {resources.map((resource) => (
-                <Card key={resource.title} className="border-slate-200 bg-white shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="text-slate-900">{resource.title}</CardTitle>
-                    <CardDescription>{resource.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2 text-sm text-slate-700">
-                      {resource.tips.map((tip) => (
-                        <li key={tip} className="flex items-center gap-2">
-                          <span className="text-cyan-600">✓</span> {tip}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           </TabsContent>
 
-          <TabsContent value="wallet" className="mt-6">
-            {!walletAddress ? (
-              <WalletSelector
-                selectedWallet={selectedWallet}
-                onWalletSelect={setSelectedWallet}
-                onConnect={handleWalletConnect}
-              />
-            ) : (
-              <div className="space-y-6">
-                <Card className="border-emerald-200 bg-emerald-50 shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="text-emerald-900">Wallet connected</CardTitle>
-                    <CardDescription>
-                      {isDemoWallet
-                        ? 'Demo mode is active, but the platform remains fully usable.'
-                        : 'The live trading platform is unlocked.'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="rounded-2xl border border-emerald-200 bg-white p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Wallet</p>
-                      <p className="mt-2 break-all font-mono text-sm text-slate-900">{walletAddress}</p>
-                    </div>
-                    <div className="rounded-2xl border border-emerald-200 bg-white p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Connected wallet</p>
-                      <p className="mt-2 text-sm font-semibold text-slate-900">{walletLabel}</p>
-                    </div>
-                    <Button onClick={handleDisconnect} className="w-full bg-slate-900 text-white hover:bg-slate-800">
-                      Disconnect wallet
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-slate-200 bg-white shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="text-slate-900">Mode</CardTitle>
-                    <CardDescription>Keep demo as a fallback while still enabling real Phantom signing.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                      Current mode: <span className="font-semibold text-slate-950">{isDemoWallet ? 'Demo' : 'Live'}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+          <TabsContent value="wallet" className="mt-6 space-y-6">
+            <Suspense fallback={<LiFiWalletWidgetFallback />}>
+              <LiFiWalletWidget />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="platform" className="mt-6 space-y-6">
-            {!walletAddress ? (
-              <Card className="border-slate-200 bg-white shadow-lg">
-                <CardHeader>
-                  <CardTitle className="text-slate-900">Trading platform locked</CardTitle>
-                  <CardDescription>Connect a Solana wallet to unlock AI protection, trading, and USDC auto-secure.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button className="bg-cyan-500 text-slate-950 hover:bg-cyan-400" onClick={() => setActiveTab('wallet')}>
-                    Go to Wallet tab
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
-                <MarketMonitor
-                  walletAddress={walletAddress}
+            <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
+              <MarketMonitor
+                walletAddress={platformWalletAddress}
+                solanaBalance={solanaBalance}
+                onAutoSecure={handleAutoSecure}
+              />
+
+              <div className="space-y-6">
+                <SolanaTradingDesk
+                  walletAddress={platformWalletAddress}
                   solanaBalance={solanaBalance}
-                  onAutoSecure={handleAutoSecure}
+                  demoMode={platformDemoMode}
+                  onTradeComplete={handleTradeComplete}
+                  onTradeStatus={setGuardMessage}
                 />
 
-                <div className="space-y-6">
-                  <SolanaTradingDesk
-                    walletAddress={walletAddress}
-                    solanaBalance={solanaBalance}
-                    demoMode={isDemoWallet}
-                    onTradeComplete={handleTradeComplete}
-                    onTradeStatus={setGuardMessage}
-                  />
+                <Card className="border-slate-200 bg-slate-950 text-white shadow-2xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <ShieldCheck className="h-5 w-5 text-cyan-300" /> AI Protection Layer
+                    </CardTitle>
+                    <CardDescription className="text-slate-300">
+                      The guard watches the market and converts assets to USDC on Solana when risk increases.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Guard status</p>
+                      <p className="mt-2 font-semibold text-cyan-300">
+                        {platformDemoMode ? 'Demo guard active. Connect a wallet in LI.FI for live execution.' : guardMessage}
+                      </p>
+                    </div>
 
-                  <Card className="border-slate-200 bg-slate-950 text-white shadow-2xl">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-white">
-                        <ShieldCheck className="h-5 w-5 text-cyan-300" /> AI Protection Layer
-                      </CardTitle>
-                      <CardDescription className="text-slate-300">
-                        The guard watches the market and converts assets to USDC on Solana when risk increases.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Guard status</p>
-                        <p className="mt-2 font-semibold text-cyan-300">{guardMessage}</p>
-                      </div>
-
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-                        <p className="mb-2 font-semibold text-white">What the AI does</p>
-                        <ul className="space-y-2">
-                          <li>• Watches market movements around the clock</li>
-                          <li>• Detects volatility and downside pressure</li>
-                          <li>• Secures SOL into USDC on Solana when needed</li>
-                        </ul>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                      <p className="mb-2 font-semibold text-white">What the AI does</p>
+                      <ul className="space-y-2">
+                        <li>• Watches market movements around the clock</li>
+                        <li>• Detects volatility and downside pressure</li>
+                        <li>• Secures SOL into USDC on Solana when needed</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            )}
+            </div>
           </TabsContent>
         </Tabs>
       </div>

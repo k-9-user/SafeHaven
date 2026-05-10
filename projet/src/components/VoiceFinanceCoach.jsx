@@ -3,13 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Mic, MicOff, Send, Volume2 } from 'lucide-react';
 
 const INITIAL_MESSAGES = [
   {
     id: 1,
     role: 'assistant',
-    text: 'Pose ta question finance. La réponse vocale peut aussi fonctionner localement dans ton navigateur.',
+    text: 'Tell me your risk profile, amount, and goal. I can answer by text and voice, with beginner-safe DeFi guidance on Solana.',
   },
 ];
 
@@ -27,6 +29,9 @@ export default function VoiceFinanceCoach() {
   const [isListening, setIsListening] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [statusText, setStatusText] = useState('');
+  const [riskProfile, setRiskProfile] = useState('beginner');
+  const [amount, setAmount] = useState('50');
+  const [goal, setGoal] = useState('Build emergency savings');
 
   const recognitionRef = useRef(null);
   const audioRef = useRef(null);
@@ -35,7 +40,7 @@ export default function VoiceFinanceCoach() {
 
   const startListening = () => {
     if (!speechRecognitionSupported) {
-      setStatusText('Reconnaissance vocale non supportee sur ce navigateur.');
+      setStatusText('Speech recognition is not supported on this browser.');
       return;
     }
 
@@ -46,13 +51,13 @@ export default function VoiceFinanceCoach() {
 
     const SpeechRecognition = getSpeechRecognition();
     const recognition = new SpeechRecognition();
-    recognition.lang = 'fr-FR';
+    recognition.lang = 'en-US';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
       setIsListening(true);
-      setStatusText('Ecoute en cours...');
+      setStatusText('Listening...');
     };
 
     recognition.onresult = (event) => {
@@ -63,13 +68,13 @@ export default function VoiceFinanceCoach() {
     };
 
     recognition.onerror = () => {
-      setStatusText('Erreur de reconnaissance vocale. Reessaie.');
+      setStatusText('Speech recognition failed. Try again.');
       setIsListening(false);
     };
 
     recognition.onend = () => {
       setIsListening(false);
-      setStatusText((current) => (current === 'Ecoute en cours...' ? 'Ecoute terminee.' : current));
+      setStatusText((current) => (current === 'Listening...' ? 'Listening finished.' : current));
     };
 
     recognitionRef.current = recognition;
@@ -88,9 +93,9 @@ export default function VoiceFinanceCoach() {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'fr-FR';
+      utterance.lang = 'en-US';
       window.speechSynthesis.speak(utterance);
-      setStatusText('Lecture vocale locale en cours.');
+      setStatusText('Local voice playback is running.');
       return;
     }
 
@@ -103,13 +108,13 @@ export default function VoiceFinanceCoach() {
 
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
-        setStatusText(payload?.message || 'Synthese vocale indisponible.');
+        setStatusText(payload?.message || 'Voice synthesis is unavailable.');
         return;
       }
 
       const payload = await response.json();
       if (!payload?.audioBase64 || !payload?.mimeType) {
-        setStatusText('Aucun audio recu du serveur.');
+        setStatusText('No audio received from the server.');
         return;
       }
 
@@ -121,17 +126,22 @@ export default function VoiceFinanceCoach() {
       const audio = new Audio(`data:${payload.mimeType};base64,${payload.audioBase64}`);
       audioRef.current = audio;
       await audio.play();
-      setStatusText('Reponse vocale en lecture.');
+      setStatusText('Voice answer is playing.');
     } catch (error) {
       console.error('Voice playback error:', error);
-      setStatusText('Lecture audio impossible.');
+      setStatusText('Audio playback failed.');
     }
   };
 
   const askAssistant = async () => {
     if (!draft.trim() || isSending) return;
 
-    const userText = draft.trim();
+    const userText = [
+      `Risk profile: ${riskProfile}.`,
+      `Amount available: ${amount || 'not specified'} USD equivalent.`,
+      `Goal: ${goal || 'not specified'}.`,
+      `Question: ${draft.trim()}`,
+    ].join(' ');
     setDraft('');
     setStatusText('');
 
@@ -155,7 +165,7 @@ export default function VoiceFinanceCoach() {
       }
 
       const payload = await response.json();
-      const answer = payload?.response || 'Je peux t aider avec ton budget, ta protection et tes investissements.';
+      const answer = payload?.response || 'I can help with budgeting, protection, and safer beginner investing.';
 
       const assistantMessage = {
         id: Date.now() + 1,
@@ -172,10 +182,10 @@ export default function VoiceFinanceCoach() {
       const fallback = {
         id: Date.now() + 1,
         role: 'assistant',
-        text: 'Mode local actif. Commence par un fonds d urgence, garde une partie en USDC et évite de tout concentrer sur un seul actif.',
+        text: 'Local mode is active. Start with an emergency buffer, keep only a limited portion in USDC, and avoid concentrating everything in one asset.',
       };
       setMessages((previous) => [...previous, fallback]);
-      setStatusText('Mode local actif.');
+      setStatusText('Local mode is active.');
     } finally {
       setIsSending(false);
       stopListening();
@@ -187,9 +197,9 @@ export default function VoiceFinanceCoach() {
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-slate-900">Coach IA vocal</CardTitle>
+            <CardTitle className="text-slate-900">Voice AI Finance Coach</CardTitle>
             <CardDescription>
-              Pose des questions finance en texte ou a la voix. Le navigateur peut parler sans ElevenLabs.
+              Ask by text or voice. ElevenLabs is used when configured, with browser voice as a fallback.
             </CardDescription>
           </div>
           <Badge variant="outline" className="rounded-md border-cyan-200 bg-cyan-50 text-cyan-700">
@@ -209,18 +219,42 @@ export default function VoiceFinanceCoach() {
               }`}
             >
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                {message.role === 'assistant' ? 'Coach IA' : 'Toi'}
+                {message.role === 'assistant' ? 'AI Coach' : 'You'}
               </p>
               <p className="mt-1 leading-6">{message.text}</p>
             </div>
           ))}
         </div>
 
+        <div className="grid gap-3 md:grid-cols-[1fr_0.8fr_1.2fr]">
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Risk profile</label>
+            <Select value={riskProfile} onValueChange={setRiskProfile}>
+              <SelectTrigger>
+                <SelectValue placeholder="Risk profile" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="beginner">Beginner, capital protection first</SelectItem>
+                <SelectItem value="moderate">Moderate, balanced growth</SelectItem>
+                <SelectItem value="volatile">Volatile income, low downside tolerance</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Amount</label>
+            <Input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Goal</label>
+            <Input value={goal} onChange={(event) => setGoal(event.target.value)} />
+          </div>
+        </div>
+
         <Textarea
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           className="min-h-24"
-          placeholder="Ex: Comment proteger mon capital quand le marche crypto chute ?"
+          placeholder="Example: How should I protect my money if crypto markets fall?"
           disabled={isSending}
         />
 
@@ -232,7 +266,7 @@ export default function VoiceFinanceCoach() {
             disabled={isSending || !speechRecognitionSupported}
           >
             {isListening ? <MicOff className="mr-2 h-4 w-4" /> : <Mic className="mr-2 h-4 w-4" />}
-            {isListening ? 'Stop micro' : 'Parler'}
+            {isListening ? 'Stop mic' : 'Speak'}
           </Button>
 
           <Button
@@ -243,12 +277,12 @@ export default function VoiceFinanceCoach() {
             className={voiceEnabled ? 'bg-cyan-600 text-white hover:bg-cyan-500' : ''}
           >
             <Volume2 className="mr-2 h-4 w-4" />
-            {voiceEnabled ? 'Voix ON' : 'Voix OFF'}
+            {voiceEnabled ? 'Voice ON' : 'Voice OFF'}
           </Button>
 
           <Button type="button" onClick={askAssistant} disabled={isSending || !draft.trim()}>
             {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-            Envoyer
+            Send
           </Button>
         </div>
 
@@ -260,7 +294,7 @@ export default function VoiceFinanceCoach() {
 
         {!speechRecognitionSupported && (
           <p className="text-xs text-slate-500">
-            Ton navigateur ne supporte pas la reconnaissance vocale Web Speech API. Tu peux quand meme utiliser le chat texte.
+            This browser does not support Web Speech API recognition. Text chat still works.
           </p>
         )}
       </CardContent>

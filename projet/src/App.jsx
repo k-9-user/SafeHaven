@@ -9,7 +9,6 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-import TestnetBanner from '@/components/TestnetBanner';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -73,11 +72,8 @@ function App() {
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
         <Router>
-          <TestnetBanner />
           <NavigationTracker />
-          <div className="pt-10">
-            <AuthenticatedApp />
-          </div>
+          <AuthenticatedApp />
         </Router>
         <Toaster />
         <VisualEditAgent />
