@@ -32,6 +32,19 @@ const LANGUAGE_OPTIONS = {
 const ELEVENLABS_VOICE_ID = 'VMTRU6n4ozl5SzXToh9l';
 const ELEVENLABS_AGENT_ID = import.meta.env.VITE_ELEVENLABS_AGENT_ID;
 
+const FLOW_QUESTIONS = {
+  amount: {
+    en: 'Thank you. Second question: about how much money are we talking about?',
+    fr: 'Merci. Deuxieme question: de quel montant parle t on environ?',
+    es: 'Gracias. Segunda pregunta: de cuanto dinero estamos hablando aproximadamente?',
+  },
+  risk: {
+    en: 'Thank you. Last question: do you want very safe, balanced, or more growth with more risk?',
+    fr: 'Merci. Derniere question: veux tu quelque chose de tres prudent, equilibre, ou plus de croissance avec plus de risque?',
+    es: 'Gracias. Ultima pregunta: quieres algo muy seguro, equilibrado, o mas crecimiento con mas riesgo?',
+  },
+};
+
 function getSpeechRecognition() {
   if (typeof window === 'undefined') return null;
   return window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -125,6 +138,12 @@ export default function VoiceFinanceCoach() {
   const [isThinking, setIsThinking] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [status, setStatus] = useState('ready');
+  const [conversationStep, setConversationStep] = useState('goal');
+  const [voiceProfile, setVoiceProfile] = useState({
+    goal: '',
+    amount: '',
+    riskProfile: '',
+  });
 
   const recognitionRef = useRef(null);
   const audioRef = useRef(null);
@@ -195,9 +214,11 @@ export default function VoiceFinanceCoach() {
     setIsThinking(false);
     setIsSpeaking(false);
     setStatus('ready');
+    setConversationStep('goal');
+    setVoiceProfile({ goal: '', amount: '', riskProfile: '' });
   };
 
-  const askAssistant = async (spokenQuestion) => {
+  const askAssistant = async (spokenQuestion, profileOverride = voiceProfile) => {
     if (!spokenQuestion || isThinking) return;
 
     setIsThinking(true);
@@ -212,6 +233,9 @@ export default function VoiceFinanceCoach() {
           language,
           message: spokenQuestion,
           voiceOnly: true,
+          goal: profileOverride.goal,
+          amount: profileOverride.amount,
+          riskProfile: profileOverride.riskProfile,
           marketContext,
           lifiContext: {
             availableInPlatform: true,
@@ -250,6 +274,50 @@ export default function VoiceFinanceCoach() {
     }
   };
 
+  const handleSpokenAnswer = async (transcript) => {
+    const spokenAnswer = transcript.trim();
+    if (!spokenAnswer) return;
+
+    if (conversationStep === 'goal') {
+      setVoiceProfile((previous) => ({ ...previous, goal: spokenAnswer }));
+      setConversationStep('amount');
+      setStatus('speaking');
+      await playVoice(FLOW_QUESTIONS.amount[language] || FLOW_QUESTIONS.amount.en);
+      setStatus('ready');
+      return;
+    }
+
+    if (conversationStep === 'amount') {
+      setVoiceProfile((previous) => ({ ...previous, amount: spokenAnswer }));
+      setConversationStep('risk');
+      setStatus('speaking');
+      await playVoice(FLOW_QUESTIONS.risk[language] || FLOW_QUESTIONS.risk.en);
+      setStatus('ready');
+      return;
+    }
+
+    if (conversationStep === 'risk') {
+      const completedProfile = {
+        ...voiceProfile,
+        riskProfile: spokenAnswer,
+      };
+      setVoiceProfile(completedProfile);
+      setConversationStep('ready');
+      await askAssistant(
+        [
+          `Goal: ${completedProfile.goal}.`,
+          `Amount: ${completedProfile.amount}.`,
+          `Risk comfort: ${completedProfile.riskProfile}.`,
+          'Give a short voice-first recommendation using current Solana market context and LI.FI route options.',
+        ].join(' '),
+        completedProfile,
+      );
+      return;
+    }
+
+    await askAssistant(spokenAnswer);
+  };
+
   const startListening = () => {
     if (!speechRecognitionSupported) {
       setSpokenStatus('mic-error', selectedLanguage.micError);
@@ -278,7 +346,7 @@ export default function VoiceFinanceCoach() {
       const transcript = event?.results?.[0]?.[0]?.transcript || '';
       setIsListening(false);
       if (transcript) {
-        askAssistant(transcript);
+        handleSpokenAnswer(transcript);
       }
     };
 
@@ -304,6 +372,8 @@ export default function VoiceFinanceCoach() {
     }
 
     setCallActive(true);
+    setConversationStep('goal');
+    setVoiceProfile({ goal: '', amount: '', riskProfile: '' });
     setStatus('speaking');
     await playVoice(selectedLanguage.intro);
     setStatus('ready');
