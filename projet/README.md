@@ -17,14 +17,15 @@ Inspired by [*AI for Personal Finance*](https://gustaf.ai/ai-for-personal-financ
 - Interactive tools: budget planner, goal setter, currency converter
 
 ### 🤖 AI Finance Agent
-- Ask questions about your finances, investments, risks
-- Personalized advice without bias
-- Market insights and strategy recommendations
+- Floating 24/7 finance advisor chatbot
+- Voice-only input in English, French, or Spanish
+- Personalized guidance from risk profile, amount, and goal, collected conversationally by voice
+- ElevenLabs voice output when configured, browser voice fallback otherwise
 
-### 💳 Smart Wallet
-- Connect Solana (Phantom wallet)
-- Track your balance and transactions
-- Mint achievement NFTs
+### 💳 LI.FI Wallet Connect
+- Compare swap and bridge routes
+- Prepare protected USDC routes on Solana
+- Keep wallet approval under the user's control
 
 ### 🛡️ Auto-Secure Crypto (Beta)
 - Deposits tracked 24/7
@@ -36,7 +37,8 @@ Inspired by [*AI for Personal Finance*](https://gustaf.ai/ai-for-personal-financ
 - **Frontend**: React + Vite, Tailwind CSS
 - **Blockchain**: Solana (web3.js, token program)
 - **AI**: OpenAI integration for finance assistant
-- **Backend**: Express.js
+- **Voice**: ElevenLabs text-to-speech endpoint with browser fallback
+- **Backend**: Express.js locally, Vercel serverless functions in production
 - **Database**: Via API integration
 
 ## Getting Started
@@ -59,17 +61,24 @@ VITE_API_URL=http://localhost:3000
 OPENAI_API_KEY=your_openai_key_here
 ELEVENLABS_API_KEY=your_elevenlabs_key_here
 ELEVENLABS_VOICE_ID=optional_voice_id
+VITE_ELEVENLABS_AGENT_ID=optional_public_elevenlabs_agent_id
+VITE_WALLET_CONNECT_PROJECT_ID=optional_walletconnect_project_id
 SOLANA_RPC_URL=https://api.devnet.solana.com
 ```
 
 ### Deployment
 
-Vite + Express on any cloud (Vercel, Heroku, Azure, etc.)
+Vite frontend with `/api` serverless functions on Vercel.
 
 ```bash
 npm run build      # Build for production
 npm run preview    # Preview production build
 ```
+
+For Vercel, add `OPENAI_API_KEY`, `ELEVENLABS_API_KEY`, and optional `ELEVENLABS_VOICE_ID` in Project Settings > Environment Variables.
+Add `VITE_ELEVENLABS_AGENT_ID` when you create a public ElevenLabs Conversational AI agent and want the production voice agent widget instead of browser speech recognition.
+
+The current voice MVP does not require an MCP. ElevenLabs Agents can run with a public `agentId`; use MCP later only if the agent needs to call external tools beyond the current SafeHaven APIs.
 
 ## License
 

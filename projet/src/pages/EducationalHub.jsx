@@ -101,7 +101,6 @@ export default function EducationalHub() {
   const totalLessons = COURSES.reduce((sum, course) => sum + course.lessons.length, 0);
   const completedLessons = COURSES.reduce((sum, course) => sum + getCourseProgress(course.id).completed, 0);
   const lessonProgressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-  const currentCourseProgress = getCourseProgress(currentCourse.id);
   const currentScore = getLessonScore(currentCourse.id, currentLesson.id);
   const currentScoreSummary = getCourseScoreSummary(currentCourse.id);
   const currentLessonRead = isLessonRead(currentCourse.id, currentLesson.id);
@@ -218,8 +217,6 @@ export default function EducationalHub() {
           </TabsList>
 
           <TabsContent value="education" className="mt-6 space-y-6">
-            <VoiceFinanceCoach />
-
             <Card className="border-cyan-200 bg-white shadow-lg">
               <CardHeader>
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -423,6 +420,7 @@ export default function EducationalHub() {
           </TabsContent>
         </Tabs>
       </div>
+      <VoiceFinanceCoach />
     </div>
   );
 }

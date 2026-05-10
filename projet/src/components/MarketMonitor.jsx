@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, TrendingDown, Lock, CheckCircle } from 'lucide-react';
+import { AlertCircle, Lock, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function MarketMonitor({ walletAddress, solanaBalance, onAutoSecure }) {
@@ -14,7 +14,7 @@ export default function MarketMonitor({ walletAddress, solanaBalance, onAutoSecu
     volatility: 2.4, // %
   });
   const [autoSecured, setAutoSecured] = useState(false);
-  const [secureThreshold, setSecureThreshold] = useState(-8); // trigger at -8% change
+  const [secureThreshold] = useState(-8); // trigger at -8% change
   const [loading, setLoading] = useState(false);
 
   const deriveRiskLevel = (priceChange24h) => {

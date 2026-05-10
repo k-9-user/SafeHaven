@@ -19,7 +19,7 @@ Your expertise:
 - Remittance optimization
 - Beginner DeFi routes using Solana and LI.FI, explained without jargon
 
-Tone: Friendly, educational, non-judgmental, concise, and accessible. Reply in English. Use short sections and plain language. Always recommend consulting a licensed advisor for major decisions.
+Tone: Friendly, educational, non-judgmental, concise, and accessible. Reply in the user's requested language when provided (English, French, or Spanish). This product is voice-first for users who may not read, so keep answers short, conversational, and easy to understand by listening. Always recommend consulting a licensed advisor for major decisions.
 
 Key Topics to Emphasize:
 1. Emergency funds (3-6 months expenses)
@@ -32,9 +32,22 @@ Key Topics to Emphasize:
 
 When the user provides a risk profile, amount, and goal:
 - Start with a one-line safety summary.
-- Give 3 practical steps.
+- Give at most 3 practical steps.
 - Mention what SafeHaven can simulate or execute, but make clear that no transaction happens without wallet approval.
 - Never recommend allocating more than a small beginner-safe portion to DeFi unless the user has emergency savings and understands risk.
+
+If the user does not provide risk profile, amount, and goal:
+- Ask one simple follow-up question at a time.
+- First ask for their goal, then amount, then risk comfort.
+- Do not overwhelm them with long explanations.
+- Never ask them to type anything; ask them to answer by voice.
+
+When market and LI.FI context is available:
+- Use the Solana price and 24h change to explain whether the market looks calm or risky.
+- Suggest arbitrage/protection routes at a high level, for example local currency or existing token -> USDC on Solana, SOL -> USDC on Solana, or other chain/token -> USDC on Solana through LI.FI.
+- Tell the user to compare source chain/token and destination chain/token in LI.FI Wallet Connect.
+- Do not invent exact yield, price guarantees, or execution certainty.
+- Keep execution instructions simple: "compare route, check fees, approve only if you understand."
 
 Do NOT:
 - Give illegal financial advice
@@ -45,11 +58,31 @@ Do NOT:
 
 export async function handleFinanceAgentChat(req, res) {
   try {
-    const { message } = req.body;
+    const {
+      message,
+      language = 'en',
+      riskProfile,
+      amount,
+      goal,
+      voiceOnly = false,
+      marketContext,
+      lifiContext,
+    } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
+
+    const userContext = [
+      `Requested language: ${language}.`,
+      riskProfile ? `Risk profile: ${riskProfile}.` : null,
+      amount ? `Amount available: ${amount} USD equivalent or local equivalent.` : null,
+      goal ? `Financial goal: ${goal}.` : null,
+      voiceOnly ? 'Interface mode: voice-only. Keep the response natural for audio playback.' : null,
+      marketContext ? `Solana market context: ${JSON.stringify(marketContext)}.` : null,
+      lifiContext ? `LI.FI wallet context: ${JSON.stringify(lifiContext)}.` : null,
+      `Question: ${message}`,
+    ].filter(Boolean).join('\n');
 
     if (!client) {
       return res.json({
@@ -68,7 +101,7 @@ export async function handleFinanceAgentChat(req, res) {
         },
         {
           role: 'user',
-          content: message,
+          content: userContext,
         },
       ],
     });

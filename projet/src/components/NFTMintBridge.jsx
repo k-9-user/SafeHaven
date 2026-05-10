@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Trophy, Zap, Wallet, AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -86,7 +86,7 @@ export default function NFTMintBridge({
 
   return (
     <div className="w-full space-y-4">
-      <style jsx>{`
+      <style>{`
         @keyframes pixel-glow {
           0%, 100% { 
             box-shadow: 0 0 10px rgba(255, 215, 0, 0.5), 0 0 20px rgba(255, 23, 68, 0.3);
