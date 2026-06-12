@@ -31,7 +31,7 @@ import { voiceRouter } from './routes/voice.js';
 import { yieldsRouter } from './routes/yields.js';
 
 const app = express();
-const PORT = parseInt(process.env['AGENT_PORT'] ?? '3001', 10);
+const PORT = parseInt(process.env['PORT'] ?? process.env['AGENT_PORT'] ?? '3001', 10);
 
 // ─── Security Middleware ────────────────────────────────────────────────────
 
