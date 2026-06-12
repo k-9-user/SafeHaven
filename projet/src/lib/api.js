@@ -1,4 +1,5 @@
 const BASE_URL = import.meta.env.VITE_AGENT_URL ?? '';
+console.log('[SafeHaven API] BASE_URL =', BASE_URL || '(vide — VITE_AGENT_URL non défini)');
 
 function getToken() {
   return localStorage.getItem('safehaven_token');
