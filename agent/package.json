@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc && cp src/llm/system-prompt.md dist/llm/system-prompt.md",
+    "build": "tsc && mkdir -p dist/llm && cp src/llm/system-prompt.md dist/llm/system-prompt.md",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
