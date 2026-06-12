@@ -1,425 +1,453 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  BookOpen,
-  Lock,
-  ShieldCheck,
-  Sparkles,
-  Trophy,
-  Dice6,
-  Flame,
-  Star,
-  CheckCircle2,
-  Circle,
-  ChevronRight,
-  PlayCircle,
-  Medal,
-} from 'lucide-react';
-import MarketMonitor from '../components/MarketMonitor';
-import VoiceFinanceCoach from '../components/VoiceFinanceCoach';
+// @ts-nocheck
+import { useState, useEffect } from 'react';
+import { useLanguage } from '@/lib/LanguageContext';
 import COURSES from '@/data/coursesData';
 import {
   isLessonRead,
   markLessonRead,
-  getCourseProgress,
-  setLessonScore,
-  getLessonScore,
-  getCourseScoreSummary,
+  addXP,
+  getTotalXP,
+  getLevel,
+  isWorldUnlocked,
 } from '@/lib/courseProgress';
-import { useSolana } from '../hooks/useSolana';
-import { executeJupiterSwap } from '@/lib/jupiterSwap';
 
-const LiFiWalletWidget = lazy(() => import('../components/LiFiWalletWidget'));
+// ─── XP bar component ────────────────────────────────────────────────────────
 
-function LiFiWalletWidgetFallback() {
+function XPBar({ xp, level, nextLevelXP }) {
+  const pct =
+    nextLevelXP === Infinity
+      ? 100
+      : Math.min(100, Math.round(((xp - level.xp) / (nextLevelXP - level.xp)) * 100));
+
   return (
-    <Card className="border-blue-200 bg-white shadow-lg">
-      <CardHeader>
-        <CardTitle className="text-blue-950">LI.FI Wallet Connect</CardTitle>
-        <CardDescription>Loading wallet connection tools...</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="min-h-[360px] animate-pulse rounded-lg bg-blue-50" />
-      </CardContent>
-    </Card>
+    <div className="w-full">
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-xs text-slate-400">{xp} XP</span>
+        <span className="text-xs text-slate-400">
+          {nextLevelXP === Infinity ? 'MAX' : `${nextLevelXP} XP`}
+        </span>
+      </div>
+      <div className="h-2.5 w-full rounded-full bg-slate-700 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-700"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
   );
 }
 
-export default function EducationalHub() {
-  const location = useLocation();
-  const { address: solanaAddress } = useSolana();
+// ─── Lesson node on the world path ───────────────────────────────────────────
 
-  const [activeTab, setActiveTab] = useState(() => {
-    if (typeof window === 'undefined') return 'education';
-    const savedTab = window.sessionStorage.getItem('safehaven-active-tab');
-    return savedTab === 'platform' ? 'platform' : 'education';
-  });
-  const [walletAddress, setWalletAddress] = useState(null);
-  const [solanaBalance, setSolanaBalance] = useState(12.5);
-  const [selectedCourseIndex, setSelectedCourseIndex] = useState(0);
-  const [selectedLessonIndex, setSelectedLessonIndex] = useState(0);
-  const [quizResult, setQuizResult] = useState(null);
-  const [dailyChallengeIndex, setDailyChallengeIndex] = useState(0);
-  const [, setProgressTick] = useState(0);
+function LessonNode({ lesson, isCompleted, isUnlocked, isSelected, isBoss, onClick, lang }) {
+  const title = lesson.title[lang] ?? lesson.title.en;
 
-  useEffect(() => {
-    if (solanaAddress && solanaAddress !== walletAddress) {
-      setWalletAddress(solanaAddress);
-    }
-  }, [solanaAddress, walletAddress]);
+  let nodeStyle = '';
+  let icon = null;
 
-  useEffect(() => {
-    const section = location.hash.replace('#', '');
-    if (section === 'education' || section === 'platform') {
-      setActiveTab(section);
-      if (typeof window !== 'undefined') {
-        window.sessionStorage.setItem('safehaven-active-tab', section);
+  if (isBoss) {
+    nodeStyle = isCompleted
+      ? 'bg-yellow-500 border-yellow-400 text-white shadow-yellow-500/40'
+      : isUnlocked
+        ? 'bg-yellow-900/60 border-yellow-500 text-yellow-300 hover:bg-yellow-800/60'
+        : 'bg-slate-800 border-slate-600 text-slate-500 cursor-not-allowed';
+    icon = isCompleted ? '✓' : isUnlocked ? '★' : '🔒';
+  } else if (isCompleted) {
+    nodeStyle = 'bg-emerald-600 border-emerald-500 text-white shadow-emerald-500/30';
+    icon = '✓';
+  } else if (isUnlocked) {
+    nodeStyle = 'bg-cyan-900/60 border-cyan-500 text-cyan-300 hover:bg-cyan-800/60';
+    icon = '▶';
+  } else {
+    nodeStyle = 'bg-slate-800 border-slate-600 text-slate-500 cursor-not-allowed';
+    icon = '🔒';
+  }
+
+  return (
+    <button
+      onClick={isUnlocked ? onClick : undefined}
+      disabled={!isUnlocked}
+      className={`flex flex-col items-center gap-1 group transition-all ${!isUnlocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+      title={title}
+    >
+      <div
+        className={`relative flex items-center justify-center w-11 h-11 rounded-full border-2 shadow-lg transition-all duration-200 text-base font-bold
+          ${nodeStyle}
+          ${isSelected ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-900 scale-110' : isUnlocked ? 'hover:scale-105' : ''}
+        `}
+      >
+        {icon}
+      </div>
+      <span className={`text-[10px] leading-tight text-center max-w-[52px] truncate ${isSelected ? 'text-white font-semibold' : 'text-slate-400'}`}>
+        {lesson.xp}xp
+      </span>
+    </button>
+  );
+}
+
+// ─── Connector between nodes ─────────────────────────────────────────────────
+
+function NodeConnector({ done }) {
+  return (
+    <div className={`flex-1 h-0.5 mx-1 rounded-full transition-colors ${done ? 'bg-emerald-500' : 'bg-slate-600'}`} />
+  );
+}
+
+// ─── World card ──────────────────────────────────────────────────────────────
+
+function WorldCard({ world, worldIndex, onSelectLesson, selectedLessonId, tick, lang, t }) {
+  const unlocked = isWorldUnlocked(worldIndex);
+  const title = world.title[lang] ?? world.title.en;
+  const completedCount = world.lessons.filter((l) => isLessonRead(world.id, l.id)).length;
+  const total = world.lessons.length;
+
+  return (
+    <div
+      className={`rounded-2xl border transition-all ${
+        unlocked
+          ? 'border-slate-700 bg-slate-800/80'
+          : 'border-slate-800 bg-slate-900/60 opacity-60'
+      }`}
+    >
+      {/* World header */}
+      <div className={`flex items-center justify-between px-5 py-3.5 rounded-t-2xl bg-gradient-to-r ${world.color} bg-opacity-20`}>
+        <div>
+          <h3 className="font-bold text-white text-sm">{title}</h3>
+          <p className="text-xs text-white/70 mt-0.5">
+            {completedCount}/{total} {t('edu.lessons_done').toLowerCase()}
+          </p>
+        </div>
+        {!unlocked && <span className="text-lg">🔒</span>}
+        {unlocked && completedCount === total && <span className="text-lg">🏆</span>}
+        {unlocked && completedCount > 0 && completedCount < total && (
+          <div className="text-xs font-semibold text-white/80 bg-white/10 rounded-full px-2 py-0.5">
+            {Math.round((completedCount / total) * 100)}%
+          </div>
+        )}
+      </div>
+
+      {/* Lesson path */}
+      <div className="px-4 py-4">
+        <div className="flex items-center">
+          {world.lessons.map((lesson, idx) => {
+            const completed = isLessonRead(world.id, lesson.id);
+            const prevCompleted = idx === 0 || isLessonRead(world.id, world.lessons[idx - 1].id);
+            const lessonUnlocked = unlocked && (idx === 0 || prevCompleted);
+            const isBoss = !!lesson.isChallenge;
+            const isSelected = selectedLessonId === lesson.id;
+
+            return (
+              <div key={lesson.id} className="flex items-center flex-1 min-w-0">
+                <LessonNode
+                  lesson={lesson}
+                  isCompleted={completed}
+                  isUnlocked={lessonUnlocked}
+                  isSelected={isSelected}
+                  isBoss={isBoss}
+                  lang={lang}
+                  onClick={() => onSelectLesson(world, lesson)}
+                />
+                {idx < world.lessons.length - 1 && (
+                  <NodeConnector done={completed} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Quiz section ─────────────────────────────────────────────────────────────
+
+function QuizSection({ lesson, worldId, onComplete, lang, t }) {
+  const [selected, setSelected] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  const quiz = lesson.quiz;
+  const question = quiz.question[lang] ?? quiz.question.en;
+  const options = quiz.options.map((o) => o[lang] ?? o.en);
+  const isCorrect = selected === quiz.correctIndex;
+
+  const handleSubmit = () => {
+    if (selected === null) return;
+    setSubmitted(true);
+    if (isCorrect) {
+      const alreadyDone = isLessonRead(worldId, lesson.id);
+      if (!alreadyDone) {
+        markLessonRead(worldId, lesson.id, true);
+        addXP(lesson.xp);
       }
-      return;
+      onComplete(isCorrect);
     }
+  };
 
-    if (section === 'wallet') {
-      setActiveTab('platform');
-      if (typeof window !== 'undefined') {
-        window.sessionStorage.setItem('safehaven-active-tab', 'platform');
-      }
+  const handleSkip = () => {
+    const alreadyDone = isLessonRead(worldId, lesson.id);
+    if (!alreadyDone) {
+      markLessonRead(worldId, lesson.id, true);
+      addXP(Math.round(lesson.xp * 0.5)); // half XP for skip
     }
-  }, [location.hash]);
-
-  useEffect(() => {
-    setSelectedLessonIndex(0);
-    setQuizResult(null);
-  }, [selectedCourseIndex]);
-
-  const currentCourse = COURSES[selectedCourseIndex] || COURSES[0];
-  const currentLesson = currentCourse.lessons[selectedLessonIndex] || currentCourse.lessons[0];
-
-  const totalLessons = COURSES.reduce((sum, course) => sum + course.lessons.length, 0);
-  const completedLessons = COURSES.reduce((sum, course) => sum + getCourseProgress(course.id).completed, 0);
-  const lessonProgressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
-  const currentScore = getLessonScore(currentCourse.id, currentLesson.id);
-  const currentScoreSummary = getCourseScoreSummary(currentCourse.id);
-  const currentLessonRead = isLessonRead(currentCourse.id, currentLesson.id);
-  const platformWalletAddress = walletAddress || 'DEMO-SAFEHAVEN-PLATFORM';
-
-  const playfulModules = [
-    {
-      title: 'Mission USDC',
-      description: 'Protect part of your capital with a simple visual rule.',
-      badge: '5 min',
-      icon: ShieldCheck,
-    },
-    {
-      title: 'Budget Boost',
-      description: 'Choose what to reduce so you can build a stronger safety margin.',
-      badge: 'Quiz',
-      icon: Trophy,
-    },
-    {
-      title: 'Risk Wheel',
-      description: 'Decide when to hold cash, save, or convert based on the scenario.',
-      badge: 'Game',
-      icon: Dice6,
-    },
-    {
-      title: 'Weekly Streak',
-      description: 'Stack small wins to unlock SafeHaven badges.',
-      badge: 'Streak',
-      icon: Flame,
-    },
-  ];
-
-  const dailyChallenges = [
-    'Explain emergency fund in one sentence.',
-    'Spot the best habit for protecting $20 of income.',
-    'Choose one action that lowers your risk today.',
-    'Say when cash is safer than chasing yield.',
-  ];
-
-  const pathSteps = [
-    { title: 'Start here', label: 'Budget basics', done: getCourseProgress('finance-basics').completed > 0 },
-    { title: 'Build safety', label: 'Emergency fund', done: getCourseProgress('finance-basics').completed >= 2 },
-    { title: 'Protect capital', label: 'Stablecoin shield', done: getCourseProgress('market-protection').completed > 0 },
-    { title: 'Wallet ready', label: 'Sign on chain', done: Boolean(walletAddress) },
-  ];
-
-  const handleAutoSecure = async ({ walletAddress: currentWallet, solAmount, secureReason }) => {
-    if (!currentWallet) {
-      throw new Error('Connect a wallet first');
-    }
-
-    if (String(currentWallet).startsWith('DEMO-')) {
-      const demoSignature = `demo-${Date.now().toString(36)}`;
-      setSolanaBalance((previous) => Math.max(0, previous - Number(solAmount || 0)));
-      return {
-        signature: demoSignature,
-        estimatedInputSol: Number(solAmount || 0),
-        estimatedOutputUsdc: Number(solAmount || 0) * 141.25,
-        priceImpactPct: 0.05,
-      };
-    }
-
-    const result = await executeJupiterSwap({
-      walletAddress: currentWallet,
-      amountSol: solAmount,
-      slippageBps: 50,
-    });
-
-    setSolanaBalance((previous) => Math.max(0, previous - Number(solAmount || 0)));
-    return result;
+    onComplete(null);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-slate-50 to-cyan-50 p-4 sm:p-6">
-      <div className="mx-auto max-w-7xl space-y-8">
-        <div className="rounded-lg bg-gradient-to-r from-slate-950 via-blue-900 to-cyan-900 p-6 text-white shadow-2xl md:p-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-3xl space-y-4">
-              <Badge variant="outline" className="w-fit border-white/20 bg-white/10 text-white">
-                Mobile-first financial inclusion MVP
-              </Badge>
-              <h1 className="text-4xl font-black md:text-6xl">SafeHaven</h1>
-              <p className="max-w-2xl text-sm leading-6 text-slate-200 md:text-base">
-                A voice-accessible AI companion that helps beginners protect money, learn finance basics, and preview
-                safer Solana DeFi actions based on risk profile, amount, and goals.
-              </p>
-            </div>
-            <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm md:min-w-72">
-              <div className="flex items-center gap-2 text-cyan-200"><Sparkles className="h-4 w-4" /> ElevenLabs-ready voice</div>
-              <div className="flex items-center gap-2 text-cyan-200"><ShieldCheck className="h-4 w-4" /> Solana wallet approval</div>
-              <div className="flex items-center gap-2 text-cyan-200"><BookOpen className="h-4 w-4" /> LI.FI route preview</div>
-            </div>
+    <div className="rounded-xl border border-slate-600 bg-slate-800/60 p-4 space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-widest text-cyan-400">Quiz</p>
+      <p className="text-sm font-medium text-white leading-snug">{question}</p>
+
+      <div className="space-y-2">
+        {options.map((opt, idx) => {
+          let btnStyle = 'border-slate-600 bg-slate-700/60 text-slate-200 hover:border-cyan-500 hover:bg-slate-700';
+          if (submitted) {
+            if (idx === quiz.correctIndex) btnStyle = 'border-emerald-500 bg-emerald-500/20 text-emerald-300';
+            else if (idx === selected) btnStyle = 'border-red-500 bg-red-500/20 text-red-300';
+            else btnStyle = 'border-slate-700 bg-slate-800 text-slate-500';
+          } else if (selected === idx) {
+            btnStyle = 'border-cyan-500 bg-cyan-500/15 text-white';
+          }
+
+          return (
+            <button
+              key={idx}
+              onClick={() => !submitted && setSelected(idx)}
+              disabled={submitted}
+              className={`w-full text-left px-4 py-2.5 rounded-xl border text-sm transition-all ${btnStyle}`}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+
+      {submitted ? (
+        <div className={`flex items-center gap-2 text-sm font-semibold ${isCorrect ? 'text-emerald-400' : 'text-red-400'}`}>
+          {isCorrect ? `✅ ${t('common.correct')} +${lesson.xp} XP` : `❌ ${t('common.wrong')}`}
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <button
+            onClick={handleSubmit}
+            disabled={selected === null}
+            className="flex-1 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold transition-all"
+          >
+            {t('common.check')}
+          </button>
+          <button
+            onClick={handleSkip}
+            className="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-400 hover:text-white text-sm transition-all"
+          >
+            {t('common.skip')}
+          </button>
+        </div>
+      )}
+
+      {submitted && !isCorrect && (
+        <button
+          onClick={() => { setSelected(null); setSubmitted(false); }}
+          className="w-full py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm transition-all"
+        >
+          {t('common.back')} / Retry
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Lesson panel ─────────────────────────────────────────────────────────────
+
+function LessonPanel({ world, lesson, onClose, onComplete, lang, t }) {
+  const title = lesson.title[lang] ?? lesson.title.en;
+  const content = lesson.content[lang] ?? lesson.content.en;
+  const alreadyDone = isLessonRead(world.id, lesson.id);
+
+  return (
+    <div className="flex flex-col h-full bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden">
+      {/* Panel header */}
+      <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-slate-700 shrink-0">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            {lesson.isChallenge && <span className="text-yellow-400 text-xs font-bold uppercase tracking-widest">⚔️ {t('edu.boss_challenge')}</span>}
+            {!lesson.isChallenge && <span className="text-cyan-400 text-xs font-bold uppercase tracking-widest">Lesson · {lesson.xp} XP</span>}
+            {alreadyDone && <span className="text-emerald-400 text-xs font-semibold">✓ Done</span>}
           </div>
+          <h2 className="text-base font-bold text-white leading-snug">{title}</h2>
+        </div>
+        <button
+          onClick={onClose}
+          className="shrink-0 text-slate-400 hover:text-white text-lg leading-none mt-0.5"
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Panel body */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+        {/* Lesson content */}
+        <div className="space-y-3">
+          {content.split('\n\n').map((para, i) => (
+            <p key={i} className="text-sm text-slate-300 leading-relaxed">{para}</p>
+          ))}
         </div>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) => {
-            setActiveTab(value);
-            if (typeof window !== 'undefined') {
-              window.sessionStorage.setItem('safehaven-active-tab', value);
-            }
-          }}
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-2 bg-slate-900/95 p-1 text-white">
-            <TabsTrigger value="education" className="min-w-0 gap-1 px-1 text-[11px] sm:gap-2 sm:text-sm data-[state=active]:bg-cyan-400 data-[state=active]:text-slate-950">
-              <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Education
-            </TabsTrigger>
-            <TabsTrigger value="platform" className="min-w-0 gap-1 px-1 text-[11px] sm:gap-2 sm:text-sm data-[state=active]:bg-cyan-400 data-[state=active]:text-slate-950">
-              <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Platform
-            </TabsTrigger>
-          </TabsList>
+        {/* Quiz */}
+        {lesson.quiz && (
+          <QuizSection
+            lesson={lesson}
+            worldId={world.id}
+            onComplete={onComplete}
+            lang={lang}
+            t={t}
+          />
+        )}
 
-          <TabsContent value="education" className="mt-6 space-y-6">
-            <Card className="border-cyan-200 bg-white shadow-lg">
-              <CardHeader>
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <CardTitle className="text-slate-900">Learning progression</CardTitle>
-                    <CardDescription>
-                      Clear milestones, real lessons, quizzes, and accessible beginner finance missions.
-                    </CardDescription>
-                  </div>
-                  <Badge className="w-fit rounded-md bg-cyan-600 text-white hover:bg-cyan-600">
-                    Course progress: {lessonProgressPercent}%
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="grid gap-4 xl:grid-cols-[0.9fr_1.5fr_1fr]">
-                <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center gap-2 text-slate-900">
-                    <PlayCircle className="h-5 w-5 text-cyan-600" />
-                    <p className="font-semibold">Learning path</p>
-                  </div>
-                  <div className="space-y-3">
-                    {pathSteps.map((step, index) => (
-                      <button
-                        key={step.label}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCourseIndex(index % COURSES.length);
-                          setSelectedLessonIndex(0);
-                          setQuizResult(null);
-                        }}
-                        className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition-all ${
-                          selectedCourseIndex === index % COURSES.length
-                            ? 'border-cyan-400 bg-cyan-50'
-                            : 'border-slate-200 bg-white hover:border-slate-300'
-                        }`}
-                      >
-                        {step.done ? (
-                          <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                        ) : (
-                          <Circle className="h-5 w-5 text-slate-300" />
-                        )}
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{step.title}</p>
-                          <p className="font-medium text-slate-900">{step.label}</p>
-                        </div>
-                        <ChevronRight className="ml-auto h-4 w-4 text-slate-400" />
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Course XP</p>
-                    <p className="mt-2 text-2xl font-black text-slate-950">{completedLessons * 50 + currentScoreSummary.avgScore}</p>
-                    <p className="mt-1 text-sm text-slate-600">Complete lessons and quizzes to grow your mastery score.</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Lesson room</p>
-                      <h3 className="mt-1 text-2xl font-black text-slate-950">{currentLesson.title}</h3>
-                    </div>
-                    <Badge className="rounded-md bg-slate-900 text-white">{currentScore ?? 0}% saved</Badge>
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Course</p>
-                      <p className="mt-2 text-sm font-semibold text-slate-900">{currentCourse.title}</p>
-                      <p className="mt-1 text-sm text-slate-600">{currentCourse.description}</p>
-                    </div>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Status</p>
-                      <p className="mt-2 text-sm font-semibold text-slate-900">{currentLessonRead ? 'Lesson completed' : 'In progress'}</p>
-                      <p className="mt-1 text-sm text-slate-600">Quiz average: {currentScoreSummary.avgScore}%</p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                    <div className="flex items-center gap-2 text-slate-900">
-                      <Medal className="h-4 w-4 text-cyan-600" />
-                      <p className="font-semibold">Real lesson content</p>
-                    </div>
-                    <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{currentLesson.content}</p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      className="bg-slate-900 text-white hover:bg-slate-800"
-                      onClick={() => {
-                        markLessonRead(currentCourse.id, currentLesson.id, !currentLessonRead);
-                        setProgressTick((value) => value + 1);
-                      }}
-                    >
-                      {currentLessonRead ? 'Mark unread' : 'Mark read'}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setQuizResult(null)}
-                    >
-                      Reset quiz
-                    </Button>
-                  </div>
-
-                  {currentLesson.quiz && (
-                    <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-5">
-                      <p className="text-xs uppercase tracking-[0.2em] text-cyan-700">Quick quiz</p>
-                      <p className="mt-2 text-sm font-semibold text-slate-900">{currentLesson.quiz.question}</p>
-
-                      <div className="mt-3 space-y-2">
-                        {currentLesson.quiz.options.map((option, optionIndex) => (
-                          <Button
-                            key={option}
-                            variant="outline"
-                            className="w-full justify-start border-cyan-200 bg-white text-left"
-                            onClick={() => {
-                              const isCorrect = optionIndex === currentLesson.quiz.correctIndex;
-                              const score = isCorrect ? 100 : 0;
-                              setLessonScore(currentCourse.id, currentLesson.id, score);
-                              setQuizResult(isCorrect ? 'Correct answer!' : 'Wrong answer, try again.');
-                              setProgressTick((value) => value + 1);
-                            }}
-                          >
-                            {option}
-                          </Button>
-                        ))}
-                      </div>
-
-                      <div className="mt-3 text-sm text-slate-700">
-                        <p>{quizResult || 'Choose an answer to get your score.'}</p>
-                        <p className="mt-1">Saved score: {currentScore ?? '-'}%</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center gap-2 text-slate-900">
-                    <Trophy className="h-5 w-5 text-cyan-600" />
-                    <p className="font-semibold">Game layer</p>
-                  </div>
-                  <div className="grid gap-3">
-                    {playfulModules.map((module, index) => {
-                      const Icon = module.icon;
-                      return (
-                        <button
-                          key={module.title}
-                          type="button"
-                          onClick={() => setDailyChallengeIndex(index)}
-                          className={`rounded-2xl border p-4 text-left transition-all hover:-translate-y-1 hover:shadow-md ${
-                            dailyChallengeIndex === index
-                              ? 'border-cyan-400 bg-cyan-50'
-                              : 'border-slate-200 bg-white'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                              <div className="rounded-2xl bg-slate-900 p-3 text-white">
-                                <Icon className="h-5 w-5" />
-                              </div>
-                              <div>
-                                <h3 className="font-semibold text-slate-900">{module.title}</h3>
-                                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{module.badge}</p>
-                              </div>
-                            </div>
-                            <Star className="h-5 w-5 text-cyan-500" />
-                          </div>
-                          <p className="mt-3 text-sm leading-6 text-slate-600">{module.description}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                    <div className="flex items-center gap-2 text-slate-900">
-                      <Flame className="h-4 w-4 text-cyan-600" />
-                      <p className="font-semibold">Current challenge</p>
-                    </div>
-                    <p className="mt-2 text-sm leading-6 text-slate-700">{dailyChallenges[dailyChallengeIndex]}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-          </TabsContent>
-
-          <TabsContent value="platform" className="mt-6 space-y-6">
-            <div className="space-y-6">
-              <MarketMonitor
-                walletAddress={platformWalletAddress}
-                solanaBalance={solanaBalance}
-                onAutoSecure={handleAutoSecure}
-              />
-
-              <Suspense fallback={<LiFiWalletWidgetFallback />}>
-                <LiFiWalletWidget />
-              </Suspense>
-            </div>
-          </TabsContent>
-        </Tabs>
+        {/* Already done, no quiz needed */}
+        {alreadyDone && !lesson.quiz && (
+          <div className="flex items-center gap-2 text-emerald-400 text-sm font-semibold">
+            ✅ {t('edu.chapter_complete')}
+          </div>
+        )}
       </div>
-      <VoiceFinanceCoach />
+    </div>
+  );
+}
+
+// ─── Level badge ──────────────────────────────────────────────────────────────
+
+const LEVEL_COLORS = ['', 'text-slate-300', 'text-blue-300', 'text-green-300', 'text-yellow-300', 'text-purple-300'];
+const LEVEL_BG    = ['', 'bg-slate-700', 'bg-blue-900/60', 'bg-green-900/60', 'bg-yellow-900/60', 'bg-purple-900/60'];
+
+function LevelBadge({ levelData, t }) {
+  const levelNames = {
+    Novice:      t('edu.novice'),
+    Apprentice:  t('edu.apprentice'),
+    Saver:       t('edu.saver'),
+    Investor:    t('edu.investor'),
+    'DeFi Master': t('edu.master'),
+  };
+  const displayName = levelNames[levelData.name] ?? levelData.name;
+  return (
+    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl ${LEVEL_BG[levelData.level]}`}>
+      <span className="text-sm font-black text-white">Lvl {levelData.level}</span>
+      <span className={`text-xs font-semibold ${LEVEL_COLORS[levelData.level]}`}>{displayName}</span>
+    </div>
+  );
+}
+
+// ─── Main EducationalHub component ───────────────────────────────────────────
+
+export default function EducationalHub() {
+  const { lang, t } = useLanguage();
+  const [tick, setTick] = useState(0); // force re-render after XP/progress changes
+  const [selectedWorld, setSelectedWorld] = useState(null);
+  const [selectedLesson, setSelectedLesson] = useState(null);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+
+  const levelData = getLevel();
+  const totalXP = getTotalXP();
+
+  const handleSelectLesson = (world, lesson) => {
+    setSelectedWorld(world);
+    setSelectedLesson(lesson);
+  };
+
+  const handleClose = () => {
+    setSelectedLesson(null);
+    setSelectedWorld(null);
+  };
+
+  const handleComplete = (wasCorrect) => {
+    const prevLevel = levelData.level;
+    setTick((n) => n + 1);
+    const newLevel = getLevel();
+    if (newLevel.level > prevLevel) {
+      setShowLevelUp(true);
+      setTimeout(() => setShowLevelUp(false), 3000);
+    }
+    if (wasCorrect !== false) {
+      // keep panel open to show result; user can close manually
+    }
+  };
+
+  const completedTotal = COURSES.reduce(
+    (sum, w) => sum + w.lessons.filter((l) => isLessonRead(w.id, l.id)).length,
+    0
+  );
+  const totalLessons = COURSES.reduce((sum, w) => sum + w.lessons.length, 0);
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-white">
+
+      {/* Level-up toast */}
+      {showLevelUp && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 animate-bounce">
+          <div className="flex items-center gap-3 bg-yellow-500 text-slate-900 px-6 py-3 rounded-2xl shadow-2xl font-bold text-sm">
+            🎉 {t('edu.level_up')} → Level {getLevel().level}
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+
+        {/* ── Header: XP bar + stats ── */}
+        <div className="rounded-2xl bg-slate-800 border border-slate-700 px-5 py-4 space-y-3">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <LevelBadge levelData={levelData} t={t} />
+              <div className="text-sm text-slate-400">
+                {t('edu.total_xp')}: <span className="text-white font-bold">{totalXP}</span>
+              </div>
+              <div className="text-sm text-slate-400">
+                {t('edu.lessons_done')}: <span className="text-white font-bold">{completedTotal}/{totalLessons}</span>
+              </div>
+            </div>
+          </div>
+          <XPBar
+            xp={totalXP}
+            level={levelData}
+            nextLevelXP={levelData.nextLevelXP}
+          />
+        </div>
+
+        {/* ── Main grid: worlds + lesson panel ── */}
+        <div className={`grid gap-5 ${selectedLesson ? 'lg:grid-cols-[1fr_420px]' : 'grid-cols-1'}`}>
+
+          {/* World list */}
+          <div className="space-y-3">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 px-1">
+              {t('edu.your_progress')}
+            </h2>
+            {COURSES.map((world, idx) => (
+              <WorldCard
+                key={world.id}
+                world={world}
+                worldIndex={idx}
+                onSelectLesson={handleSelectLesson}
+                selectedLessonId={selectedLesson?.id ?? null}
+                tick={tick}
+                lang={lang}
+                t={t}
+              />
+            ))}
+          </div>
+
+          {/* Lesson detail panel */}
+          {selectedLesson && selectedWorld && (
+            <div className="lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-hidden">
+              <LessonPanel
+                world={selectedWorld}
+                lesson={selectedLesson}
+                onClose={handleClose}
+                onComplete={handleComplete}
+                lang={lang}
+                t={t}
+              />
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

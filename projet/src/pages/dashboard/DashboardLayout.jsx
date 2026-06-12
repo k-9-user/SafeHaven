@@ -1,20 +1,23 @@
+// @ts-nocheck
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
+import { useLanguage } from '@/lib/LanguageContext';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import {
   LayoutDashboard, BookOpen, ShieldCheck, MessageSquare,
   Settings, LogOut, Menu, X,
 } from 'lucide-react';
 
-const NAV = [
-  { to: '/dashboard',            label: 'Vue d\'ensemble', icon: LayoutDashboard, end: true },
-  { to: '/dashboard/education',  label: 'Éducation',       icon: BookOpen },
-  { to: '/dashboard/platform',   label: 'Plateforme',      icon: ShieldCheck },
-  { to: '/dashboard/chat',       label: 'Coach IA',        icon: MessageSquare },
-  { to: '/dashboard/settings',   label: 'Paramètres',      icon: Settings },
-];
+function SidebarContent({ onClose, user, onLogout, t }) {
+  const NAV = [
+    { to: '/dashboard',           labelKey: 'nav.overview',  icon: LayoutDashboard, end: true },
+    { to: '/dashboard/education', labelKey: 'nav.education', icon: BookOpen },
+    { to: '/dashboard/platform',  labelKey: 'nav.platform',  icon: ShieldCheck },
+    { to: '/dashboard/chat',      labelKey: 'nav.chat',      icon: MessageSquare },
+    { to: '/dashboard/settings',  labelKey: 'nav.settings',  icon: Settings },
+  ];
 
-function SidebarContent({ onClose, user, onLogout }) {
   return (
     <div className="flex h-full flex-col bg-slate-900">
       {/* Logo */}
@@ -35,7 +38,7 @@ function SidebarContent({ onClose, user, onLogout }) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {NAV.map(({ to, label, icon: Icon, end }) => (
+        {NAV.map(({ to, labelKey, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -50,11 +53,15 @@ function SidebarContent({ onClose, user, onLogout }) {
             }
           >
             <Icon className="h-4 w-4 shrink-0" />
-            {label}
+            {t(labelKey)}
           </NavLink>
         ))}
-
       </nav>
+
+      {/* Language switcher before user footer */}
+      <div className="px-4 pb-2">
+        <LanguageSwitcher className="justify-center" />
+      </div>
 
       {/* User footer */}
       <div className="border-t border-slate-700/60 px-4 py-4 space-y-2">
@@ -63,7 +70,7 @@ function SidebarContent({ onClose, user, onLogout }) {
             {user?.name?.[0]?.toUpperCase() ?? 'U'}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-white truncate">{user?.name ?? 'Utilisateur'}</p>
+            <p className="text-sm font-medium text-white truncate">{user?.name ?? 'User'}</p>
             <p className="text-xs text-slate-400 truncate">{user?.email}</p>
           </div>
         </div>
@@ -72,7 +79,7 @@ function SidebarContent({ onClose, user, onLogout }) {
           className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-400 hover:bg-red-500/10 hover:text-red-400 transition-all"
         >
           <LogOut className="h-4 w-4" />
-          Déconnexion
+          {t('nav.logout')}
         </button>
       </div>
     </div>
@@ -81,6 +88,7 @@ function SidebarContent({ onClose, user, onLogout }) {
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
+  const { t }            = useLanguage();
   const navigate         = useNavigate();
   const [open, setOpen]  = useState(false);
 
@@ -94,7 +102,7 @@ export default function DashboardLayout() {
 
       {/* Sidebar desktop */}
       <aside className="hidden md:flex md:w-56 lg:w-64 shrink-0 flex-col">
-        <SidebarContent user={user} onLogout={handleLogout} />
+        <SidebarContent user={user} onLogout={handleLogout} t={t} />
       </aside>
 
       {/* Sidebar mobile overlay */}
@@ -105,7 +113,7 @@ export default function DashboardLayout() {
             onClick={() => setOpen(false)}
           />
           <aside className="absolute left-0 top-0 bottom-0 w-64 flex flex-col z-10">
-            <SidebarContent user={user} onLogout={handleLogout} onClose={() => setOpen(false)} />
+            <SidebarContent user={user} onLogout={handleLogout} onClose={() => setOpen(false)} t={t} />
           </aside>
         </div>
       )}
@@ -114,18 +122,19 @@ export default function DashboardLayout() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Mobile top bar */}
-        <header className="md:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-slate-200 shrink-0">
+        <header className="md:hidden flex items-center gap-3 px-4 py-3 bg-slate-900 border-b border-slate-700 shrink-0">
           <button
             onClick={() => setOpen(true)}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+            className="p-2 rounded-lg hover:bg-slate-700 text-slate-400 transition-colors"
             aria-label="Menu"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1">
             <img src="/logo.svg" alt="Safe Haven Money" className="h-7 w-7" />
-            <span className="font-bold text-slate-900 text-sm">Safe Haven Money</span>
+            <span className="font-bold text-white text-sm">Safe Haven Money</span>
           </div>
+          <LanguageSwitcher />
         </header>
 
         {/* Page content */}

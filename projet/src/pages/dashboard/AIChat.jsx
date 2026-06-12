@@ -1,19 +1,28 @@
+// @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import VoiceFinanceCoach from '@/components/VoiceFinanceCoach';
+import { useLanguage } from '@/lib/LanguageContext';
 
 const AGENT_URL = import.meta.env.VITE_AGENT_URL ?? '';
 
 const LANGUAGES = {
+  en: {
+    code:        'en',
+    label:       'English',
+    flag:        '🇬🇧',
+    placeholder: 'Ask Coco a question…',
+    initial:     "Hello! I'm **Coco**, your AI financial coach. I can help you understand personal finance basics, evaluate safe savings options, and answer your financial questions. How can I help you?",
+  },
   fr: {
     code:        'fr',
     label:       'Français',
     flag:        '🇫🇷',
     placeholder: 'Posez une question à Coco…',
-    initial:     'Bonjour ! Je suis **Coco**, votre coach financier IA. Je peux vous aider à comprendre les bases de la finance, évaluer vos options d\'épargne sécurisées et répondre à vos questions. Comment puis-je vous aider ?',
+    initial:     "Bonjour ! Je suis **Coco**, votre coach financier IA. Je peux vous aider à comprendre les bases de la finance, évaluer vos options d'épargne sécurisées et répondre à vos questions. Comment puis-je vous aider ?",
   },
   es: {
     code:        'es',
@@ -24,21 +33,30 @@ const LANGUAGES = {
   },
 };
 
-export default function AIChat() {
-  const [lang, setLang]           = useState('fr');
-  const [messages, setMessages]   = useState([{ role: 'assistant', content: LANGUAGES.fr.initial }]);
-  const [input, setInput]         = useState('');
-  const [streaming, setStreaming] = useState(false);
-  const bottomRef                 = useRef(null);
-  const L = LANGUAGES[lang];
+const ERROR_MESSAGES = {
+  en: (msg) => `Sorry, I can't connect to the server. Make sure the backend is running (port 3001).\n\n_Error: ${msg}_`,
+  fr: (msg) => `Désolé, je n'arrive pas à me connecter au serveur. Vérifiez que le backend est démarré (port 3001).\n\n_Erreur : ${msg}_`,
+  es: (msg) => `Lo siento, no puedo conectarme al servidor. Verifica que el backend esté iniciado (puerto 3001).\n\n_Error : ${msg}_`,
+};
 
-  // Quand la langue change, réinitialise la conversation avec le bon message d'accueil
-  const switchLang = (newLang) => {
-    if (newLang === lang || streaming) return;
-    setLang(newLang);
-    setMessages([{ role: 'assistant', content: LANGUAGES[newLang].initial }]);
-    setInput('');
-  };
+export default function AIChat() {
+  const { lang }                   = useLanguage();
+  const [messages, setMessages]    = useState([{ role: 'assistant', content: LANGUAGES[lang]?.initial ?? LANGUAGES.en.initial }]);
+  const [input, setInput]          = useState('');
+  const [streaming, setStreaming]  = useState(false);
+  const bottomRef                  = useRef(null);
+
+  const L = LANGUAGES[lang] ?? LANGUAGES.en;
+
+  // When global language changes, reset the conversation with the correct greeting
+  useEffect(() => {
+    if (!streaming) {
+      const langData = LANGUAGES[lang] ?? LANGUAGES.en;
+      setMessages([{ role: 'assistant', content: langData.initial }]);
+      setInput('');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -65,7 +83,7 @@ export default function AIChat() {
         body: JSON.stringify({ messages: history, stream: true, locale: lang }),
       });
 
-      if (!res.ok) throw new Error('Impossible de joindre le backend.');
+      if (!res.ok) throw new Error('Cannot reach the backend.');
 
       const reader  = res.body.getReader();
       const decoder = new TextDecoder();
@@ -98,13 +116,10 @@ export default function AIChat() {
         }
       }
     } catch (err) {
-      const errMsg = {
-        fr: `Désolé, je n'arrive pas à me connecter au serveur. Vérifiez que le backend est démarré (port 3001).\n\n_Erreur : ${err.message}_`,
-        es: `Lo siento, no puedo conectarme al servidor. Verifica que el backend esté iniciado (puerto 3001).\n\n_Error : ${err.message}_`,
-      };
+      const errFn = ERROR_MESSAGES[lang] ?? ERROR_MESSAGES.en;
       setMessages((prev) => {
         const updated = [...prev];
-        updated[updated.length - 1] = { role: 'assistant', content: errMsg[lang] };
+        updated[updated.length - 1] = { role: 'assistant', content: errFn(err.message) };
         return updated;
       });
     } finally {
@@ -121,35 +136,15 @@ export default function AIChat() {
 
       {/* Header */}
       <div className="border-b border-slate-200 px-5 py-3 bg-white shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600">
-              <Bot className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="font-bold text-slate-900 text-sm">Coco — Coach Financier IA</p>
-              <p className="text-xs text-slate-400">Propulsé par Claude · Safe Haven Money</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600">
+            <Bot className="h-5 w-5 text-white" />
           </div>
-
-          {/* Sélecteur de langue */}
-          <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
-            {Object.values(LANGUAGES).map((l) => (
-              <button
-                key={l.code}
-                onClick={() => switchLang(l.code)}
-                disabled={streaming}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  lang === l.code
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700 disabled:opacity-50'
-                }`}
-              >
-                <span>{l.flag}</span>
-                <span>{l.label}</span>
-              </button>
-            ))}
+          <div>
+            <p className="font-bold text-slate-900 text-sm">Coco — AI Financial Coach</p>
+            <p className="text-xs text-slate-400">Powered by Claude · Safe Haven Money</p>
           </div>
+          <span className="ml-auto text-lg" title={L.label}>{L.flag}</span>
         </div>
       </div>
 
