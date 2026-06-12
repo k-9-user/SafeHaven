@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_AGENT_URL ?? 'https://safehaven-production-05cb.up.railway.app';
+const BASE_URL = import.meta.env.VITE_AGENT_URL ?? '';
 
 function getToken() {
   return localStorage.getItem('safehaven_token');
