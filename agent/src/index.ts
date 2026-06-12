@@ -20,12 +20,6 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const FRONTEND_DIST = path.join(__dirname, '../../projet/dist');
-
 import { authRouter } from './routes/auth.js';
 import { adminRouter } from './routes/admin.js';
 import { chatRouter } from './routes/chat.js';
@@ -58,7 +52,7 @@ const allowedOrigins = (
   process.env['CORS_ORIGINS'] ?? 'http://localhost:8081,http://localhost:5173,http://localhost:4173'
 )
   .split(',')
-  .map((o: string) => o.trim());
+  .map((o: string) => o.trim().replace(/\/$/, ''));
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -118,19 +112,6 @@ app.get('/health', (_req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env['NODE_ENV'] ?? 'development',
   });
-});
-
-// ─── Frontend statique (Vite build) ──────────────────────────────────────────
-
-app.use(express.static(FRONTEND_DIST));
-
-// SPA fallback — toutes les routes non-API servent index.html
-app.get('*', (req, res) => {
-  if (req.path.startsWith('/api/')) {
-    res.status(404).json({ error: 'Not found' });
-  } else {
-    res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
-  }
 });
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
