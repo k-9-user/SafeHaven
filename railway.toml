@@ -1,0 +1,10 @@
+[build]
+builder = "nixpacks"
+buildCommand = "cd agent && npm install --include=dev && npm run build && cd ../projet && npm install --legacy-peer-deps && npm run build"
+
+[deploy]
+startCommand = "node agent/dist/index.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 60
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

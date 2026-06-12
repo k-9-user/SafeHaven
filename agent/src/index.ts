@@ -44,12 +44,16 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      fontSrc: ["'self'", 'data:'],
       connectSrc: ["'self'", 'https://api.anthropic.com', 'https://api.elevenlabs.io', 'https://li.quest'],
     },
   },
 }));
 
-// CORS — mobile app + web frontend dev server
+// CORS — dev local uniquement (en prod tout passe par la même origine Railway)
 const allowedOrigins = (
   process.env['CORS_ORIGINS'] ?? 'http://localhost:8081,http://localhost:5173,http://localhost:4173'
 )
@@ -59,11 +63,7 @@ const allowedOrigins = (
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) { callback(null, true); return; }
-    // En dev : whitelist locale. En prod : accepte aussi *.vercel.app
-    const isAllowed =
-      allowedOrigins.includes(origin) ||
-      /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin);
-    if (isAllowed) {
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error(`CORS: origin ${origin} not allowed`));
