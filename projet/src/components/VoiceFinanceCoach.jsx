@@ -7,7 +7,9 @@ const ELEVENLABS_AGENT_ID =
     ? configuredElevenLabsAgentId
     : DEFAULT_ELEVENLABS_AGENT_ID;
 
-export default function VoiceFinanceCoach() {
+// language : 'fr' | 'es' — transmis au widget ElevenLabs
+// La prop `key` côté parent force le re-montage quand la langue change
+export default function VoiceFinanceCoach({ language = 'fr' }) {
   useEffect(() => {
     if (document.querySelector('script[data-elevenlabs-convai]')) return;
 
@@ -21,7 +23,10 @@ export default function VoiceFinanceCoach() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      <elevenlabs-convai agent-id={ELEVENLABS_AGENT_ID} />
+      <elevenlabs-convai
+        agent-id={ELEVENLABS_AGENT_ID}
+        language={language}
+      />
     </div>
   );
 }

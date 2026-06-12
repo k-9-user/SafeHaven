@@ -21,6 +21,8 @@ import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 
+import { authRouter } from './routes/auth.js';
+import { adminRouter } from './routes/admin.js';
 import { chatRouter } from './routes/chat.js';
 import { memoryRouter } from './llm/memory.js';
 import { riskRouter } from './routes/risk.js';
@@ -42,21 +44,27 @@ app.use(helmet({
   },
 }));
 
-// CORS — only allow the mobile app and dev tools
-const allowedOrigins = (process.env['CORS_ORIGINS'] ?? 'http://localhost:8081')
+// CORS — mobile app + web frontend dev server
+const allowedOrigins = (
+  process.env['CORS_ORIGINS'] ?? 'http://localhost:8081,http://localhost:5173,http://localhost:4173'
+)
   .split(',')
-  .map((o) => o.trim());
+  .map((o: string) => o.trim());
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (e.g., mobile apps, curl)
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin) { callback(null, true); return; }
+    // En dev : whitelist locale. En prod : accepte aussi *.vercel.app
+    const isAllowed =
+      allowedOrigins.includes(origin) ||
+      /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin);
+    if (isAllowed) {
       callback(null, true);
     } else {
       callback(new Error(`CORS: origin ${origin} not allowed`));
     }
   },
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
@@ -87,6 +95,8 @@ app.use(express.urlencoded({ extended: false, limit: '512kb' }));
 
 // ─── Routes ─────────────────────────────────────────────────────────────────
 
+app.use('/api/auth', authRouter);
+app.use('/api/admin', adminRouter);
 app.use('/api/chat', chatLimiter, chatRouter);
 app.use('/api/chat', chatLimiter, memoryRouter);   // POST /api/chat/summarize
 app.use('/api/risk-profile', riskRouter);

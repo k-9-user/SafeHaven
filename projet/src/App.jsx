@@ -1,85 +1,92 @@
-import './App.css'
-import { Toaster } from "@/components/ui/toaster"
-import { QueryClientProvider } from '@tanstack/react-query'
-import { queryClientInstance } from '@/lib/query-client'
-import VisualEditAgent from '@/lib/VisualEditAgent'
-import NavigationTracker from '@/lib/NavigationTracker'
-import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import PageNotFound from './lib/PageNotFound';
+import './App.css';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
-import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { queryClientInstance } from '@/lib/query-client';
 
-const { Pages, Layout, mainPage } = pagesConfig;
-const mainPageKey = mainPage ?? Object.keys(Pages)[0];
-const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
+import LoginPage          from '@/pages/LoginPage';
+import RegisterPage       from '@/pages/RegisterPage';
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
+import ResetPasswordPage  from '@/pages/ResetPasswordPage';
+import DashboardLayout    from '@/pages/dashboard/DashboardLayout';
+import AdminPage          from '@/pages/admin/AdminPage';
+import AdminLogin         from '@/pages/admin/AdminLogin';
+import Overview        from '@/pages/dashboard/Overview';
+import Education       from '@/pages/dashboard/Education';
+import Platform        from '@/pages/dashboard/Platform';
+import AIChat          from '@/pages/dashboard/AIChat';
+import Settings        from '@/pages/dashboard/Settings';
 
-const LayoutWrapper = ({ children, currentPageName }) => Layout ?
-  <Layout currentPageName={currentPageName}>{children}</Layout>
-  : <>{children}</>;
+function Spinner() {
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-slate-900">
+      <div className="w-10 h-10 border-4 border-slate-700 border-t-cyan-500 rounded-full animate-spin" />
+    </div>
+  );
+}
 
-const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, navigateToLogin } = useAuth();
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading)        return <Spinner />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return children;
+}
 
-  // Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+function AdminRoute({ children }) {
+  const token = localStorage.getItem('safehaven_admin_token');
+  if (!token) return <Navigate to="/admin/login" replace />;
+  return children;
+}
 
-  // Handle authentication errors
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
-    }
-  }
+function PublicOnlyRoute({ children }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading)       return <Spinner />;
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />;
+  return children;
+}
 
-  // Render the main app
+function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={
-        <LayoutWrapper currentPageName={mainPageKey}>
-          <MainPage />
-        </LayoutWrapper>
-      } />
-      {Object.entries(Pages).map(([path, Page]) => (
-        <Route
-          key={path}
-          path={`/${path}`}
-          element={
-            <LayoutWrapper currentPageName={path}>
-              <Page />
-            </LayoutWrapper>
-          }
-        />
-      ))}
-      <Route path="*" element={<PageNotFound />} />
+      {/* Routes publiques */}
+      <Route path="/login"            element={<PublicOnlyRoute><LoginPage          /></PublicOnlyRoute>} />
+      <Route path="/register"         element={<PublicOnlyRoute><RegisterPage       /></PublicOnlyRoute>} />
+      <Route path="/forgot-password"  element={<ForgotPasswordPage />} />
+      <Route path="/reset-password"   element={<ResetPasswordPage  />} />
+
+      {/* Dashboard protégé */}
+      <Route
+        path="/dashboard"
+        element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}
+      >
+        <Route index              element={<Overview   />} />
+        <Route path="education"   element={<Education  />} />
+        <Route path="platform"    element={<Platform   />} />
+        <Route path="chat"        element={<AIChat     />} />
+        <Route path="settings"    element={<Settings   />} />
+      </Route>
+
+      {/* Admin */}
+      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin"       element={<AdminRoute><AdminPage /></AdminRoute>} />
+
+      {/* Redirections */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
-};
+}
 
-
-function App() {
-
+export default function App() {
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <NavigationTracker />
-          <AuthenticatedApp />
-        </Router>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
         <Toaster />
-        <VisualEditAgent />
       </QueryClientProvider>
     </AuthProvider>
-  )
+  );
 }
-
-export default App

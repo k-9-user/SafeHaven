@@ -154,7 +154,6 @@ export default function EducationalHub() {
 
     if (String(currentWallet).startsWith('DEMO-')) {
       const demoSignature = `demo-${Date.now().toString(36)}`;
-      setGuardMessage(`Demo secure complete: ${secureReason}`);
       setSolanaBalance((previous) => Math.max(0, previous - Number(solAmount || 0)));
       return {
         signature: demoSignature,
