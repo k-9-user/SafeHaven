@@ -128,7 +128,7 @@ export default function AIChat() {
             </div>
             <div>
               <p className="font-bold text-slate-900 text-sm">Coco — Coach Financier IA</p>
-              <p className="text-xs text-slate-400">Propulsé par Claude · SafeHaven</p>
+              <p className="text-xs text-slate-400">Propulsé par Claude · Safe Haven Money</p>
             </div>
           </div>
 

@@ -39,7 +39,7 @@ export default function AdminLogin() {
           </div>
           <div className="text-center">
             <h1 className="text-xl font-black text-white">Administration</h1>
-            <p className="text-xs text-slate-400">SafeHaven — Accès restreint</p>
+            <p className="text-xs text-slate-400">Safe Haven Money — Accès restreint</p>
           </div>
         </div>
 

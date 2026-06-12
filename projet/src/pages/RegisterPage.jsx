@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ShieldCheck, Eye, EyeOff, CheckCircle2, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -49,11 +49,9 @@ export default function RegisterPage() {
 
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500 shadow-lg shadow-cyan-500/30">
-            <ShieldCheck className="h-7 w-7 text-white" />
-          </div>
+          <img src="/logo.svg" alt="Safe Haven Money" className="h-12 w-12" />
           <div className="text-left">
-            <h1 className="text-2xl font-black text-white leading-tight">SafeHaven</h1>
+            <h1 className="text-2xl font-black text-white leading-tight">Safe Haven Money</h1>
             <p className="text-xs text-slate-400">Finance & Protection</p>
           </div>
         </div>
@@ -68,14 +66,14 @@ export default function RegisterPage() {
               </div>
               <h2 className="text-xl font-bold text-slate-900">Compte créé !</h2>
               <p className="text-sm text-slate-500">
-                Bienvenue sur SafeHaven. Un email de confirmation vous a été envoyé.
+                Bienvenue sur Safe Haven Money. Un email de confirmation vous a été envoyé.
               </p>
               <p className="text-xs text-slate-400">Redirection vers le dashboard…</p>
             </div>
           ) : (
             <>
               <h2 className="text-2xl font-bold text-slate-900 mb-1">Créer un compte</h2>
-              <p className="text-sm text-slate-500 mb-6">Rejoignez SafeHaven gratuitement</p>
+              <p className="text-sm text-slate-500 mb-6">Rejoignez Safe Haven Money gratuitement</p>
 
               {error && (
                 <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">

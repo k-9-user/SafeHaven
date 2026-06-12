@@ -81,7 +81,7 @@ export default function Overview() {
             <Zap className="h-5 w-5 text-cyan-400" />
           </div>
           <div>
-            <p className="font-bold text-white text-sm">Mission SafeHaven</p>
+            <p className="font-bold text-white text-sm">Mission Safe Haven Money</p>
             <p className="text-xs text-slate-300 mt-1 leading-relaxed">
               Donner accès à l'éducation financière et aux outils DeFi sécurisés sur Solana
               aux populations non bancarisées d'Afrique et d'Amérique Latine.

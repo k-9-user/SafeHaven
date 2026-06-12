@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import {
   LayoutDashboard, BookOpen, ShieldCheck, MessageSquare,
-  Settings, LogOut, Menu, X, ShieldHalf,
+  Settings, LogOut, Menu, X,
 } from 'lucide-react';
 
 const NAV = [
@@ -20,12 +20,10 @@ function SidebarContent({ onClose, user, onLogout }) {
       {/* Logo */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/60">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500 shadow-md shadow-cyan-500/25">
-            <ShieldHalf className="h-5 w-5 text-white" />
-          </div>
+          <img src="/logo.svg" alt="Safe Haven Money" className="h-9 w-9" />
           <div>
-            <p className="font-black text-white text-sm leading-tight">SafeHaven</p>
-            <p className="text-[10px] text-slate-400 leading-tight">Finance & Protection</p>
+            <p className="font-black text-white text-sm leading-tight">Safe Haven Money</p>
+            <p className="text-[10px] text-slate-400 leading-tight">Voice AI · Finance · DeFi</p>
           </div>
         </div>
         {onClose && (
@@ -125,10 +123,8 @@ export default function DashboardLayout() {
             <Menu className="h-5 w-5" />
           </button>
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-500">
-              <ShieldHalf className="h-4 w-4 text-white" />
-            </div>
-            <span className="font-bold text-slate-900 text-sm">SafeHaven</span>
+            <img src="/logo.svg" alt="Safe Haven Money" className="h-7 w-7" />
+            <span className="font-bold text-slate-900 text-sm">Safe Haven Money</span>
           </div>
         </header>
 

@@ -21,7 +21,7 @@ export default function Settings() {
 
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Paramètres</h1>
-        <p className="text-slate-500 mt-1 text-sm">Gérez votre compte SafeHaven.</p>
+        <p className="text-slate-500 mt-1 text-sm">Gérez votre compte Safe Haven Money.</p>
       </div>
 
       {/* Profil */}
@@ -74,7 +74,7 @@ export default function Settings() {
         </CardHeader>
         <CardContent>
           <p className="text-xs text-slate-500 leading-relaxed">
-            SafeHaven est une plateforme d'éducation financière et d'accès sécurisé aux outils DeFi sur Solana,
+            Safe Haven Money est une plateforme d'éducation financière et d'accès sécurisé aux outils DeFi sur Solana,
             conçue pour les populations non bancarisées d'Afrique et d'Amérique Latine.
             Propulsé par Claude (Anthropic) · ElevenLabs · LI.FI.
           </p>

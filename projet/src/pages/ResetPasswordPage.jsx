@@ -4,7 +4,7 @@ import { post } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ShieldCheck, CheckCircle2, Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, Loader2, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export default function ResetPasswordPage() {
   const [searchParams]                  = useSearchParams();
@@ -54,11 +54,9 @@ export default function ResetPasswordPage() {
 
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500 shadow-lg shadow-cyan-500/30">
-            <ShieldCheck className="h-7 w-7 text-white" />
-          </div>
+          <img src="/logo.svg" alt="Safe Haven Money" className="h-12 w-12" />
           <div className="text-left">
-            <h1 className="text-2xl font-black text-white leading-tight">SafeHaven</h1>
+            <h1 className="text-2xl font-black text-white leading-tight">Safe Haven Money</h1>
             <p className="text-xs text-slate-400">Finance & Protection</p>
           </div>
         </div>

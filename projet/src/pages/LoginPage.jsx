@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -36,11 +36,9 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500 shadow-lg shadow-cyan-500/30">
-            <ShieldCheck className="h-7 w-7 text-white" />
-          </div>
+          <img src="/logo.svg" alt="Safe Haven Money" className="h-12 w-12" />
           <div className="text-left">
-            <h1 className="text-2xl font-black text-white leading-tight">SafeHaven</h1>
+            <h1 className="text-2xl font-black text-white leading-tight">Safe Haven Money</h1>
             <p className="text-xs text-slate-400">Finance & Protection</p>
           </div>
         </div>
@@ -48,7 +46,7 @@ export default function LoginPage() {
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-2xl shadow-black/40 p-8">
           <h2 className="text-2xl font-bold text-slate-900 mb-1">Connexion</h2>
-          <p className="text-sm text-slate-500 mb-6">Bienvenue sur SafeHaven</p>
+          <p className="text-sm text-slate-500 mb-6">Bienvenue sur Safe Haven Money</p>
 
           {error && (
             <div className="mb-4 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
