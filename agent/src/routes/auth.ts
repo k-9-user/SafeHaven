@@ -63,20 +63,14 @@ authRouter.post('/register', async (req: Request, res: Response): Promise<void> 
     email,
     passwordHash,
     name: name?.trim() || email.split('@')[0] || 'Utilisateur',
-    isEmailVerified: false,
+    isEmailVerified: true,
   });
 
   const token = signToken(user.id, user.email);
 
-  // Envoie l'email de vérification (non bloquant)
-  const verifToken = createEmailVerifToken(user.id);
-  sendVerificationEmail(user.email, user.name, verifToken).catch((err) =>
-    console.error('[Mailer] Verification email failed:', err.message)
-  );
-
   res.status(201).json({
     token,
-    user: { id: user.id, email: user.email, name: user.name, isEmailVerified: false },
+    user: { id: user.id, email: user.email, name: user.name, isEmailVerified: true },
   });
 });
 
