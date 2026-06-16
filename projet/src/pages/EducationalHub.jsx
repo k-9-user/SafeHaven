@@ -580,6 +580,7 @@ function LessonPanel({ world, lesson, onClose, onComplete, onNext, lang, t }) {
         {/* Quiz */}
         {lesson.quiz && (
           <QuizSection
+            key={lesson.id}
             lesson={lesson}
             worldId={world.id}
             onComplete={onComplete}

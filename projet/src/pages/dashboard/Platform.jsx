@@ -1,5 +1,7 @@
+// @ts-nocheck
 import { Suspense, lazy, useState } from 'react';
 import MarketMonitor from '@/components/MarketMonitor';
+import { useLanguage } from '@/lib/LanguageContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { WalletCards } from 'lucide-react';
 
@@ -13,7 +15,7 @@ function WidgetSkeleton() {
           <WalletCards className="h-5 w-5" />
           LI.FI Wallet Connect
         </CardTitle>
-        <CardDescription>Chargement du widget de portefeuille…</CardDescription>
+        <CardDescription>Loading wallet widget…</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="min-h-[360px] animate-pulse rounded-xl bg-blue-50" />
@@ -24,9 +26,17 @@ function WidgetSkeleton() {
 
 export default function Platform() {
   const [solanaBalance, setSolanaBalance] = useState(12.5);
+  const { lang } = useLanguage();
 
-  const handleAutoSecure = async ({ walletAddress, solAmount, secureReason }) => {
-    if (!walletAddress) throw new Error('Connectez un portefeuille d\'abord');
+  const TITLE = { en: 'Platform', fr: 'Plateforme', es: 'Plataforma' }[lang] ?? 'Platform';
+  const DESC  = {
+    en: 'Monitor the market and manage your Solana assets securely.',
+    fr: 'Surveillez le marché et gérez vos actifs Solana en toute sécurité.',
+    es: 'Supervisa el mercado y gestiona tus activos Solana de forma segura.',
+  }[lang] ?? '';
+
+  const handleAutoSecure = async ({ walletAddress, solAmount }) => {
+    if (!walletAddress) throw new Error('Connect a wallet first');
     if (String(walletAddress).startsWith('DEMO-')) {
       setSolanaBalance((prev) => Math.max(0, prev - Number(solAmount || 0)));
       return {
@@ -36,16 +46,19 @@ export default function Platform() {
         priceImpactPct:      0.05,
       };
     }
-    throw new Error('Portefeuille réel requis pour les transactions');
+    throw new Error('Real wallet required for transactions');
   };
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Plateforme</h1>
-        <p className="text-slate-500 mt-1 text-sm">
-          Surveillez le marché et gérez vos actifs Solana en toute sécurité.
-        </p>
+
+      {/* Header with logo */}
+      <div className="flex items-center gap-4">
+        <img src="/logo.svg" alt="Safe Haven Money" className="h-10 w-10 shrink-0" />
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">{TITLE}</h1>
+          <p className="text-slate-500 mt-0.5 text-sm">{DESC}</p>
+        </div>
       </div>
 
       <MarketMonitor
