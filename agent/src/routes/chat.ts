@@ -64,7 +64,7 @@ chatRouter.post('/', async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const inputResult = filterInput(lastMessage.content);
+  const inputResult = filterInput(lastMessage.content, locale);
   if (inputResult.blocked) {
     if (stream) {
       res.setHeader('Content-Type', 'text/event-stream');

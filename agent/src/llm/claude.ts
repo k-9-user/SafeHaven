@@ -119,6 +119,9 @@ export function buildSystemPrompt(ctx: ConversationContext = {}): string {
     .replace(/\{\{monthly_capital\}\}/g,   capitalText)
     .replace(/\{\{wallet_type\}\}/g,       walletType);
 
+  // Reminder injected after all template replacements — extra enforcement
+  prompt += `\n\n## 🌐 Language reminder\nRespond in **${languageName}** only. Every word. No exceptions.`;
+
   if (voiceMode) {
     prompt += `
 
