@@ -31,7 +31,7 @@ export declare const RiskProfileSchema: z.ZodObject<{
     availableCapital: "under_50" | "50_200" | "200_1000" | "over_1000";
     primaryGoal: "emergency_fund" | "daily_expenses" | "future_purchase" | "retirement";
     timeHorizon: "under_3_months" | "3_12_months" | "1_3_years" | "over_3_years";
-    lossTolerance: "none" | "very_low" | "low" | "moderate";
+    lossTolerance: "low" | "none" | "very_low" | "moderate";
     hasEmergencyFund: boolean;
     completedAt: Date;
     userId?: string | undefined;
@@ -39,7 +39,7 @@ export declare const RiskProfileSchema: z.ZodObject<{
     availableCapital: "under_50" | "50_200" | "200_1000" | "over_1000";
     primaryGoal: "emergency_fund" | "daily_expenses" | "future_purchase" | "retirement";
     timeHorizon: "under_3_months" | "3_12_months" | "1_3_years" | "over_3_years";
-    lossTolerance: "none" | "very_low" | "low" | "moderate";
+    lossTolerance: "low" | "none" | "very_low" | "moderate";
     hasEmergencyFund: boolean;
     completedAt: Date;
     userId?: string | undefined;

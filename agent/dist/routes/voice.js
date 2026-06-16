@@ -19,7 +19,12 @@ import { Router } from 'express';
 import { z } from 'zod';
 import axios from 'axios';
 import https from 'node:https';
+import multer from 'multer';
 export const voiceRouter = Router();
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 25 * 1024 * 1024 },
+});
 // ─── Config ───────────────────────────────────────────────────────────────────
 const VOICE_IDS = {
     en: process.env['ELEVENLABS_VOICE_ID_EN'] ?? 'EXAVITQu4vr4xnSDxMaL',
@@ -30,6 +35,15 @@ const VOICE_IDS = {
     // sw + ha fall back to EN voice
 };
 const ELEVENLABS_MODEL = process.env['ELEVENLABS_MODEL'] ?? 'eleven_multilingual_v2';
+const STT_LANGUAGE_CODES = {
+    en: 'eng',
+    fr: 'fra',
+    es: 'spa',
+    pt: 'por',
+    sw: 'swa',
+    ha: 'hau',
+    ar: 'ara',
+};
 // ─── Schema ───────────────────────────────────────────────────────────────────
 const SynthesizeSchema = z.object({
     text: z.string().min(1).max(1400),
@@ -139,12 +153,50 @@ voiceRouter.post('/synthesize/stream', async (req, res) => {
     elReq.end();
 });
 // ─── POST /api/voice/transcribe ───────────────────────────────────────────────
-// STT is handled on-device via @react-native-voice/voice.
-// This stub exists so the client can discover the endpoint via the route listing.
-voiceRouter.post('/transcribe', (_req, res) => {
-    res.status(501).json({
-        error: 'Server-side transcription not implemented.',
-        suggestion: 'Use on-device STT via @react-native-voice/voice (Android SpeechRecognizer / iOS Speech framework).',
-    });
+// Accepts a short recording from the app and proxies it to ElevenLabs Scribe.
+voiceRouter.post('/transcribe', upload.single('audio'), async (req, res) => {
+    const apiKey = process.env['ELEVENLABS_API_KEY'];
+    if (!apiKey) {
+        res.status(503).json({ error: 'Voice transcription not configured' });
+        return;
+    }
+    const file = req.file;
+    if (!file) {
+        res.status(400).json({ error: 'Missing audio file' });
+        return;
+    }
+    const locale = typeof req.body?.locale === 'string' ? req.body.locale : 'en';
+    const languageCode = STT_LANGUAGE_CODES[locale] ?? STT_LANGUAGE_CODES.en;
+    try {
+        const formData = new FormData();
+        formData.append('model_id', 'scribe_v2');
+        formData.append('file', new Blob([file.buffer], { type: file.mimetype || 'audio/m4a' }), file.originalname || 'recording.m4a');
+        formData.append('no_verbatim', 'true');
+        formData.append('tag_audio_events', 'true');
+        if (languageCode) {
+            formData.append('language_code', languageCode);
+        }
+        const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+            method: 'POST',
+            headers: {
+                'xi-api-key': apiKey,
+            },
+            body: formData,
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`ElevenLabs STT HTTP ${response.status}: ${errorText}`);
+        }
+        const payload = await response.json();
+        res.json({
+            transcript: payload.text ?? '',
+            confidence: payload.language_probability ?? 0.9,
+            languageCode: payload.language_code ?? languageCode,
+        });
+    }
+    catch (error) {
+        console.error('[Voice] ElevenLabs transcription error:', error);
+        res.status(502).json({ error: 'Voice transcription failed. Please try again.' });
+    }
 });
 //# sourceMappingURL=voice.js.map

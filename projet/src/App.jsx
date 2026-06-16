@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import { queryClientInstance } from '@/lib/query-client';
 
+import FeedbackWidget     from '@/components/FeedbackWidget';
 import LoginPage          from '@/pages/LoginPage';
 import RegisterPage       from '@/pages/RegisterPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
@@ -88,6 +89,7 @@ export default function App() {
             <AppRoutes />
           </BrowserRouter>
           <Toaster />
+          <FeedbackWidget />
         </QueryClientProvider>
       </AuthProvider>
     </LanguageProvider>

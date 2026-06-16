@@ -91,18 +91,18 @@ export declare const OnboardingProfilePayloadSchema: z.ZodObject<{
         q3?: "a" | "b" | "c" | undefined;
         q4?: "a" | "b" | "c" | undefined;
     };
+    userId?: string | undefined;
     riskScore?: number | undefined;
     walletType?: "starter" | "mwa" | undefined;
-    userId?: string | undefined;
     publicKey?: string | undefined;
 }, {
     goals: ("emergency_fund" | "send_money_home" | "save_for_goal" | "grow_slowly")[];
     completedAt: string;
+    userId?: string | undefined;
     locale?: string | undefined;
     riskScore?: number | undefined;
     monthlyCapitalUSD?: number | undefined;
     walletType?: "starter" | "mwa" | undefined;
-    userId?: string | undefined;
     riskAnswers?: {
         q1?: "a" | "b" | "c" | undefined;
         q2?: "a" | "b" | "c" | undefined;

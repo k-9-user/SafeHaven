@@ -1,9 +1,11 @@
+// @ts-nocheck
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminGet, adminPatch, adminDel } from '@/lib/api';
 import {
   Users, BarChart3, UserX, Trash2,
   RefreshCw, Crown, ArrowLeft, UserCheck, TrendingUp, LogOut,
+  Star, MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -37,26 +39,62 @@ function ActiveBadge({ active }) {
 
 // ── Page principale ────────────────────────────────────────────────────────────
 
+function StarDisplay({ value }) {
+  return (
+    <span className="flex items-center gap-0.5">
+      {[1,2,3,4,5].map(n => (
+        <Star
+          key={n}
+          size={12}
+          className={n <= value ? 'text-amber-400 fill-amber-400' : 'text-slate-300'}
+        />
+      ))}
+      <span className="ml-1 text-xs font-bold text-slate-700">{value}/5</span>
+    </span>
+  );
+}
+
+function AvgBar({ label, value }) {
+  const pct = value ? (value / 5) * 100 : 0;
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between text-xs text-slate-500">
+        <span>{label}</span>
+        <span className="font-bold text-slate-700">{value ?? '—'}</span>
+      </div>
+      <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #1e6ff1, #00c8ff)' }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const navigate = useNavigate();
 
-  const [tab,     setTab]     = useState('users');
-  const [users,   setUsers]   = useState([]);
-  const [stats,   setStats]   = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
-  const [working, setWorking] = useState(null);
+  const [tab,      setTab]      = useState('users');
+  const [users,    setUsers]    = useState([]);
+  const [stats,    setStats]    = useState(null);
+  const [feedback, setFeedback] = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState('');
+  const [working,  setWorking]  = useState(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const [usersRes, statsRes] = await Promise.all([
+      const [usersRes, statsRes, feedbackRes] = await Promise.all([
         adminGet('/api/admin/users'),
         adminGet('/api/admin/stats'),
+        adminGet('/api/admin/feedback'),
       ]);
       setUsers(usersRes.users);
       setStats(statsRes);
+      setFeedback(feedbackRes);
     } catch (err) {
       if (err.status === 401 || err.status === 403) {
         localStorage.removeItem('safehaven_admin_token');
@@ -142,8 +180,9 @@ export default function AdminPage() {
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-white rounded-xl border border-slate-200 p-1 w-fit">
         {[
-          { id: 'stats', label: 'Statistiques', icon: BarChart3 },
-          { id: 'users', label: 'Utilisateurs',  icon: Users },
+          { id: 'stats',    label: 'Statistiques', icon: BarChart3 },
+          { id: 'users',    label: 'Utilisateurs',  icon: Users },
+          { id: 'feedback', label: `Avis (${feedback?.total ?? 0})`, icon: MessageSquare },
         ].map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -191,6 +230,69 @@ export default function AdminPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Onglet Feedback ──────────────────────────────────────────────── */}
+      {tab === 'feedback' && (
+        <div className="space-y-5">
+          {/* Moyennes */}
+          {feedback?.total > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">
+              <h2 className="font-semibold text-slate-900">
+                Moyennes — {feedback.total} réponse{feedback.total > 1 ? 's' : ''}
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <AvgBar label="Facilité d'utilisation" value={feedback.averages?.ease} />
+                <AvgBar label="Contenu éducatif"       value={feedback.averages?.content} />
+                <AvgBar label="Coach IA (Coco)"        value={feedback.averages?.ai} />
+                <AvgBar label="Expérience générale"    value={feedback.averages?.overall} />
+              </div>
+            </div>
+          )}
+
+          {/* Liste des avis */}
+          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+            {loading ? (
+              <div className="flex items-center justify-center py-16 text-slate-400">
+                <RefreshCw className="h-6 w-6 animate-spin mr-2" /> Chargement…
+              </div>
+            ) : !feedback?.feedback?.length ? (
+              <p className="text-center py-16 text-slate-400">Aucun avis reçu pour l'instant.</p>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                {feedback.feedback.map((entry) => (
+                  <div key={entry.id} className="px-5 py-4 space-y-2.5">
+                    {/* Date + page + langue */}
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                      <span>{new Date(entry.submittedAt).toLocaleString('fr-FR')}</span>
+                      {entry.page && (
+                        <span className="bg-slate-100 rounded px-1.5 py-0.5 font-mono">{entry.page}</span>
+                      )}
+                      {entry.lang && (
+                        <span className="bg-blue-50 text-blue-500 rounded px-1.5 py-0.5 font-semibold uppercase">
+                          {entry.lang}
+                        </span>
+                      )}
+                    </div>
+                    {/* Notes */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-600">
+                      <div>Utilisation <StarDisplay value={entry.ratings.ease} /></div>
+                      <div>Contenu <StarDisplay value={entry.ratings.content} /></div>
+                      <div>IA Coco <StarDisplay value={entry.ratings.ai} /></div>
+                      <div>Global <StarDisplay value={entry.ratings.overall} /></div>
+                    </div>
+                    {/* Commentaire libre */}
+                    {entry.comment && (
+                      <p className="text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2 leading-relaxed">
+                        "{entry.comment}"
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 

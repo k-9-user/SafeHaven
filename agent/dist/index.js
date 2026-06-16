@@ -19,38 +19,48 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
+import { authRouter } from './routes/auth.js';
+import { adminRouter } from './routes/admin.js';
 import { chatRouter } from './routes/chat.js';
 import { memoryRouter } from './llm/memory.js';
 import { riskRouter } from './routes/risk.js';
 import { strategyRouter } from './routes/strategies.js';
 import { voiceRouter } from './routes/voice.js';
 import { yieldsRouter } from './routes/yields.js';
+import { feedbackRouter } from './routes/feedback.js';
 const app = express();
-const PORT = parseInt(process.env['AGENT_PORT'] ?? '3001', 10);
+const PORT = parseInt(process.env['PORT'] ?? process.env['AGENT_PORT'] ?? '3001', 10);
 // ─── Security Middleware ────────────────────────────────────────────────────
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", 'data:', 'blob:'],
+            fontSrc: ["'self'", 'data:'],
             connectSrc: ["'self'", 'https://api.anthropic.com', 'https://api.elevenlabs.io', 'https://li.quest'],
         },
     },
 }));
-// CORS — only allow the mobile app and dev tools
-const allowedOrigins = (process.env['CORS_ORIGINS'] ?? 'http://localhost:8081')
+// CORS — dev local uniquement (en prod tout passe par la même origine Railway)
+const allowedOrigins = (process.env['CORS_ORIGINS'] ?? 'http://localhost:8081,http://localhost:5173,http://localhost:4173')
     .split(',')
-    .map((o) => o.trim());
+    .map((o) => o.trim().replace(/\/$/, ''));
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (e.g., mobile apps, curl)
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin) {
+            callback(null, true);
+            return;
+        }
+        if (allowedOrigins.includes(origin)) {
             callback(null, true);
         }
         else {
             callback(new Error(`CORS: origin ${origin} not allowed`));
         }
     },
-    methods: ['GET', 'POST'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 // ─── Rate Limiting ──────────────────────────────────────────────────────────
@@ -73,12 +83,15 @@ app.use(globalLimiter);
 app.use(express.json({ limit: '512kb' }));
 app.use(express.urlencoded({ extended: false, limit: '512kb' }));
 // ─── Routes ─────────────────────────────────────────────────────────────────
+app.use('/api/auth', authRouter);
+app.use('/api/admin', adminRouter);
 app.use('/api/chat', chatLimiter, chatRouter);
 app.use('/api/chat', chatLimiter, memoryRouter); // POST /api/chat/summarize
 app.use('/api/risk-profile', riskRouter);
 app.use('/api/strategies', strategyRouter);
 app.use('/api/yields', yieldsRouter);
 app.use('/api/voice', voiceRouter);
+app.use('/api/feedback', feedbackRouter);
 // ─── Health Check ────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
     res.json({

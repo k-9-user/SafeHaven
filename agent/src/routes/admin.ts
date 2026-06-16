@@ -12,6 +12,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { listUsers, updateUser, deleteUser } from '../auth/users.js';
 import { requireAdmin, signAdminToken, type AdminAuthRequest } from '../auth/middleware.js';
+import { readFeedback } from '../feedback/store.js';
 
 export const adminRouter = Router();
 
@@ -112,5 +113,26 @@ adminRouter.get('/stats', (_req: AdminAuthRequest, res: Response): void => {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 5)
       .map(sanitize),
+  });
+});
+
+// ── GET /api/admin/feedback ───────────────────────────────────────────────────
+
+adminRouter.get('/feedback', (_req: AdminAuthRequest, res: Response): void => {
+  const entries = readFeedback();
+  const avgRating = (key: 'ease' | 'content' | 'ai' | 'overall') =>
+    entries.length
+      ? Math.round((entries.reduce((s, e) => s + e.ratings[key], 0) / entries.length) * 10) / 10
+      : null;
+
+  res.json({
+    feedback: entries.slice().reverse(), // plus récents en premier
+    total: entries.length,
+    averages: {
+      ease:    avgRating('ease'),
+      content: avgRating('content'),
+      ai:      avgRating('ai'),
+      overall: avgRating('overall'),
+    },
   });
 });

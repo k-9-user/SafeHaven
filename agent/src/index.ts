@@ -28,6 +28,7 @@ import { riskRouter } from './routes/risk.js';
 import { strategyRouter } from './routes/strategies.js';
 import { voiceRouter } from './routes/voice.js';
 import { yieldsRouter } from './routes/yields.js';
+import { feedbackRouter } from './routes/feedback.js';
 
 const app = express();
 const PORT = parseInt(process.env['PORT'] ?? process.env['AGENT_PORT'] ?? '3001', 10);
@@ -102,6 +103,7 @@ app.use('/api/risk-profile', riskRouter);
 app.use('/api/strategies', strategyRouter);
 app.use('/api/yields', yieldsRouter);
 app.use('/api/voice', voiceRouter);
+app.use('/api/feedback', feedbackRouter);
 
 // ─── Health Check ────────────────────────────────────────────────────────────
 
