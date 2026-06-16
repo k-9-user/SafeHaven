@@ -48,20 +48,25 @@ app.use(helmet({
   },
 }));
 
-// CORS — dev local uniquement (en prod tout passe par la même origine Railway)
+// CORS — accepte les origines explicites + tous les previews Vercel du projet
 const allowedOrigins = (
   process.env['CORS_ORIGINS'] ?? 'http://localhost:8081,http://localhost:5173,http://localhost:4173'
 )
   .split(',')
-  .map((o: string) => o.trim().replace(/\/$/, ''));
+  .map((o: string) => o.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
+// Regex pour les previews Vercel (safe-haven*.vercel.app ou safehaven*.vercel.app)
+const VERCEL_PREVIEW = /^https:\/\/(safe-haven|safehaven)[^.]*\.vercel\.app$/;
 
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) { callback(null, true); return; }
-    if (allowedOrigins.includes(origin)) {
+    if (allowedOrigins.includes(origin) || VERCEL_PREVIEW.test(origin)) {
       callback(null, true);
     } else {
-      callback(new Error(`CORS: origin ${origin} not allowed`));
+      console.warn(`[CORS] Bloqué: ${origin}`);
+      callback(new Error(`CORS: origin ${origin} non autorisé`));
     }
   },
   methods: ['GET', 'POST', 'PATCH', 'DELETE'],
