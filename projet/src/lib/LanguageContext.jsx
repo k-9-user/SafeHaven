@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createContext, useContext, useState, useCallback } from 'react';
 
 const TRANSLATIONS = {
@@ -37,6 +38,7 @@ const TRANSLATIONS = {
     'edu.lessons_done':    'Lessons Done',
     'edu.total_xp':        'Total XP',
     'edu.your_progress':   'Your Progress',
+    'edu.next_lesson':     'Next lesson →',
 
     'settings.language': 'Language',
     'settings.account':  'Account',
@@ -56,6 +58,23 @@ const TRANSLATIONS = {
     'voice.placeholder_en': 'Ask Coco a question…',
     'voice.placeholder_fr': 'Posez une question à Coco…',
     'voice.placeholder_es': 'Hazle una pregunta a Coco…',
+
+    'overview.welcome':      'Welcome, {name} 👋',
+    'overview.subtitle':     'Here is an overview of your financial progress.',
+    'overview.quick_actions':'Quick actions',
+    'overview.mission_title':'Mission Safe Haven Money',
+    'overview.mission_body': 'Providing access to financial education and secure DeFi tools on Solana for unbanked populations in Africa and Latin America.',
+
+    'settings.title':        'Settings',
+    'settings.subtitle':     'Manage your Safe Haven Money account.',
+    'settings.profile':      'Profile',
+    'settings.profile_desc': 'Your account information.',
+    'settings.name':         'Name',
+    'settings.email':        'Email',
+    'settings.profile_soon': 'Profile editing coming soon.',
+    'settings.secure_auth':  'Secure Authentication',
+    'settings.secure_auth_desc': 'Your session is protected by a JWT token (7 days). Your password is hashed with bcrypt.',
+    'settings.about_desc':   'Safe Haven Money is a financial education platform and secure access to DeFi tools on Solana, designed for unbanked populations in Africa and Latin America. Powered by Claude (Anthropic) · ElevenLabs · LI.FI.',
   },
 
   fr: {
@@ -94,6 +113,7 @@ const TRANSLATIONS = {
     'edu.lessons_done':    'Leçons Terminées',
     'edu.total_xp':        'XP Total',
     'edu.your_progress':   'Votre Progression',
+    'edu.next_lesson':     'Leçon suivante →',
 
     'settings.language': 'Langue',
     'settings.account':  'Compte',
@@ -113,6 +133,23 @@ const TRANSLATIONS = {
     'voice.placeholder_en': 'Ask Coco a question…',
     'voice.placeholder_fr': 'Posez une question à Coco…',
     'voice.placeholder_es': 'Hazle una pregunta a Coco…',
+
+    'overview.welcome':      'Bienvenue, {name} 👋',
+    'overview.subtitle':     'Voici un aperçu de votre progression financière.',
+    'overview.quick_actions':'Actions rapides',
+    'overview.mission_title':'Mission Safe Haven Money',
+    'overview.mission_body': 'Donner accès à l\'éducation financière et aux outils DeFi sécurisés sur Solana aux populations non bancarisées d\'Afrique et d\'Amérique Latine.',
+
+    'settings.title':        'Paramètres',
+    'settings.subtitle':     'Gérez votre compte Safe Haven Money.',
+    'settings.profile':      'Profil',
+    'settings.profile_desc': 'Vos informations de compte.',
+    'settings.name':         'Nom',
+    'settings.email':        'Email',
+    'settings.profile_soon': 'La modification du profil sera disponible prochainement.',
+    'settings.secure_auth':  'Authentification sécurisée',
+    'settings.secure_auth_desc': 'Votre session est protégée par un jeton JWT (7 jours). Votre mot de passe est haché avec bcrypt.',
+    'settings.about_desc':   'Safe Haven Money est une plateforme d\'éducation financière et d\'accès sécurisé aux outils DeFi sur Solana, conçue pour les populations non bancarisées d\'Afrique et d\'Amérique Latine. Propulsé par Claude (Anthropic) · ElevenLabs · LI.FI.',
   },
 
   es: {
@@ -151,6 +188,7 @@ const TRANSLATIONS = {
     'edu.lessons_done':    'Lecciones Completadas',
     'edu.total_xp':        'XP Total',
     'edu.your_progress':   'Tu Progreso',
+    'edu.next_lesson':     'Siguiente lección →',
 
     'settings.language': 'Idioma',
     'settings.account':  'Cuenta',
@@ -170,6 +208,23 @@ const TRANSLATIONS = {
     'voice.placeholder_en': 'Ask Coco a question…',
     'voice.placeholder_fr': 'Posez une question à Coco…',
     'voice.placeholder_es': 'Hazle una pregunta a Coco…',
+
+    'overview.welcome':      'Bienvenido, {name} 👋',
+    'overview.subtitle':     'Aquí tienes un resumen de tu progreso financiero.',
+    'overview.quick_actions':'Acciones rápidas',
+    'overview.mission_title':'Misión Safe Haven Money',
+    'overview.mission_body': 'Proporcionar acceso a educación financiera y herramientas DeFi seguras en Solana para poblaciones no bancarizadas en África y América Latina.',
+
+    'settings.title':        'Ajustes',
+    'settings.subtitle':     'Gestiona tu cuenta Safe Haven Money.',
+    'settings.profile':      'Perfil',
+    'settings.profile_desc': 'Tu información de cuenta.',
+    'settings.name':         'Nombre',
+    'settings.email':        'Correo electrónico',
+    'settings.profile_soon': 'La edición de perfil estará disponible próximamente.',
+    'settings.secure_auth':  'Autenticación segura',
+    'settings.secure_auth_desc': 'Tu sesión está protegida por un token JWT (7 días). Tu contraseña está cifrada con bcrypt.',
+    'settings.about_desc':   'Safe Haven Money es una plataforma de educación financiera y acceso seguro a herramientas DeFi en Solana, diseñada para poblaciones no bancarizadas en África y América Latina. Impulsado por Claude (Anthropic) · ElevenLabs · LI.FI.',
   },
 };
 
