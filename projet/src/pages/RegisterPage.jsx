@@ -34,8 +34,8 @@ export default function RegisterPage() {
     try {
       await register(email.trim(), password, name.trim());
       setSuccess(true);
-      // Laisse l'utilisateur voir le message de succès 2s avant de rediriger
-      setTimeout(() => navigate('/dashboard', { replace: true }), 2000);
+      // Redirige vers le dashboard après 4s (le banner "vérifiez votre email" y sera affiché)
+      setTimeout(() => navigate('/dashboard', { replace: true }), 4000);
     } catch (err) {
       setError(err.message || 'Erreur lors de la création du compte.');
     } finally {
@@ -66,7 +66,8 @@ export default function RegisterPage() {
               </div>
               <h2 className="text-xl font-bold text-slate-900">Compte créé !</h2>
               <p className="text-sm text-slate-500">
-                Bienvenue sur Safe Haven Money. Un email de confirmation vous a été envoyé.
+                Un email de confirmation a été envoyé à <strong>{email}</strong>.
+                Vérifiez votre boîte et cliquez sur le lien pour activer votre compte.
               </p>
               <p className="text-xs text-slate-400">Redirection vers le dashboard…</p>
             </div>

@@ -62,6 +62,39 @@ export async function sendWelcomeEmail(to: string, name: string): Promise<void> 
   await send(to, '🛡️ Bienvenue sur SafeHaven !', html);
 }
 
+// ── Email de vérification d'adresse ───────────────────────────────────────────
+
+export async function sendVerificationEmail(to: string, name: string, token: string): Promise<void> {
+  const verifyUrl = `${APP_URL}/verify-email?token=${token}`;
+  const html = `
+    <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:32px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+        <img src="${APP_URL}/logo.svg" alt="Safe Haven Money" style="width:40px;height:40px" />
+        <span style="font-size:18px;font-weight:900;color:#0f172a">Safe Haven Money</span>
+      </div>
+      <h2 style="color:#0f172a">Confirmez votre adresse email</h2>
+      <p style="color:#475569">Bonjour ${name},</p>
+      <p style="color:#475569">
+        Merci de vous être inscrit sur Safe Haven Money !<br/>
+        Cliquez sur le bouton ci-dessous pour activer votre compte.
+        Ce lien expire dans <strong>24 heures</strong>.
+      </p>
+      <a href="${verifyUrl}"
+         style="display:inline-block;margin-top:16px;padding:12px 28px;
+                background:linear-gradient(90deg,#1e6ff1,#00c8ff);color:#fff;
+                border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">
+        ✅ Confirmer mon email
+      </a>
+      <p style="margin-top:16px;font-size:12px;color:#64748b;word-break:break-all">
+        Lien : ${verifyUrl}
+      </p>
+      <p style="margin-top:32px;font-size:12px;color:#94a3b8">
+        Si vous n'êtes pas à l'origine de cette inscription, ignorez cet email.
+      </p>
+    </div>`;
+  await send(to, '✅ Confirmez votre email — Safe Haven Money', html);
+}
+
 // ── Email de réinitialisation ──────────────────────────────────────────────────
 
 export async function sendResetEmail(to: string, name: string, token: string): Promise<void> {

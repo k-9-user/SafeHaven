@@ -14,6 +14,7 @@ export interface User {
   name: string;
   createdAt: string;
   isActive: boolean;
+  isEmailVerified?: boolean;
 }
 
 function loadUsers(): User[] {
@@ -64,7 +65,7 @@ export function updatePassword(id: string, passwordHash: string): boolean {
   return true;
 }
 
-export function updateUser(id: string, updates: Partial<Pick<User, 'isActive' | 'name'>>): User | null {
+export function updateUser(id: string, updates: Partial<Pick<User, 'isActive' | 'name' | 'isEmailVerified'>>): User | null {
   const users = loadUsers();
   const idx = users.findIndex(u => u.id === id);
   if (idx === -1) return null;

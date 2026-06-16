@@ -11,6 +11,7 @@ import LoginPage          from '@/pages/LoginPage';
 import RegisterPage       from '@/pages/RegisterPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import ResetPasswordPage  from '@/pages/ResetPasswordPage';
+import VerifyEmailPage    from '@/pages/VerifyEmailPage';
 import DashboardLayout    from '@/pages/dashboard/DashboardLayout';
 import AdminPage          from '@/pages/admin/AdminPage';
 import AdminLogin         from '@/pages/admin/AdminLogin';
@@ -56,6 +57,7 @@ function AppRoutes() {
       <Route path="/register"         element={<PublicOnlyRoute><RegisterPage       /></PublicOnlyRoute>} />
       <Route path="/forgot-password"  element={<ForgotPasswordPage />} />
       <Route path="/reset-password"   element={<ResetPasswordPage  />} />
+      <Route path="/verify-email"     element={<VerifyEmailPage    />} />
 
       {/* Dashboard protégé */}
       <Route

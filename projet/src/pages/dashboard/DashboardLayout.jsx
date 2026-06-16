@@ -4,9 +4,10 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
 import { useLanguage } from '@/lib/LanguageContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { post } from '@/lib/api';
 import {
   LayoutDashboard, BookOpen, ShieldCheck, MessageSquare,
-  Settings, LogOut, Menu, X,
+  Settings, LogOut, Menu, X, MailWarning,
 } from 'lucide-react';
 
 function SidebarContent({ onClose, user, onLogout, t }) {
@@ -86,6 +87,47 @@ function SidebarContent({ onClose, user, onLogout, t }) {
   );
 }
 
+function EmailVerifBanner({ email }) {
+  const [sent, setSent]   = useState(false);
+  const [busy, setBusy]   = useState(false);
+
+  const resend = async () => {
+    if (busy || sent) return;
+    setBusy(true);
+    try {
+      await post('/api/auth/resend-verification', {});
+      setSent(true);
+    } catch (_) {
+      setSent(true); // afficher quand même un message positif
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-2.5 text-sm"
+         style={{ background: '#7c3aed', color: '#fff' }}>
+      <div className="flex items-center gap-2 min-w-0">
+        <MailWarning className="h-4 w-4 shrink-0" />
+        <span className="truncate">
+          Confirmez votre email <strong>{email}</strong> pour activer votre compte.
+        </span>
+      </div>
+      {!sent ? (
+        <button
+          onClick={resend}
+          disabled={busy}
+          className="shrink-0 rounded-lg border border-white/40 px-3 py-1 text-xs font-semibold hover:bg-white/10 transition-colors disabled:opacity-50"
+        >
+          {busy ? '…' : 'Renvoyer'}
+        </button>
+      ) : (
+        <span className="shrink-0 text-xs font-semibold text-white/80">Email envoyé ✓</span>
+      )}
+    </div>
+  );
+}
+
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
   const { t }            = useLanguage();
@@ -120,6 +162,11 @@ export default function DashboardLayout() {
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+        {/* Banner email non vérifié */}
+        {user?.isEmailVerified === false && (
+          <EmailVerifBanner email={user.email} />
+        )}
 
         {/* Mobile top bar */}
         <header className="md:hidden flex items-center gap-3 px-4 py-3 bg-slate-900 border-b border-slate-700 shrink-0">

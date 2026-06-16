@@ -1,19 +1,23 @@
 /**
  * Auth routes
- * POST /api/auth/register         → Créer un compte
- * POST /api/auth/login            → Connexion
- * GET  /api/auth/me               → Profil (JWT requis)
- * POST /api/auth/forgot-password  → Demande de réinit. mot de passe
- * POST /api/auth/reset-password   → Nouveau mot de passe avec token
+ * POST /api/auth/register              → Créer un compte (envoie un email de vérification)
+ * POST /api/auth/login                 → Connexion
+ * GET  /api/auth/me                    → Profil (JWT requis)
+ * GET  /api/auth/verify-email          → Activer le compte via token email
+ * POST /api/auth/resend-verification   → Renvoyer l'email de vérification (JWT requis)
+ * POST /api/auth/forgot-password       → Demande de réinit. mot de passe
+ * POST /api/auth/reset-password        → Nouveau mot de passe avec token
  */
 
 import { Router, type Request, type Response } from 'express';
+import { resolve as dnsResolve } from 'node:dns/promises';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import { findByEmail, createUser, findById, updatePassword } from '../auth/users.js';
+import { findByEmail, createUser, findById, updatePassword, updateUser } from '../auth/users.js';
 import { signToken, requireAuth, type AuthRequest } from '../auth/middleware.js';
-import { sendWelcomeEmail, sendResetEmail } from '../auth/mailer.js';
+import { sendWelcomeEmail, sendResetEmail, sendVerificationEmail } from '../auth/mailer.js';
 import { createResetToken, verifyResetToken, consumeResetToken } from '../auth/resetTokens.js';
+import { createEmailVerifToken, verifyEmailVerifToken, consumeEmailVerifToken } from '../auth/emailVerifTokens.js';
 
 export const authRouter = Router();
 
@@ -39,6 +43,22 @@ const ResetSchema = z.object({
   password: z.string().min(8).max(128),
 });
 
+// ── Vérification MX (email réel) ──────────────────────────────────────────────
+
+async function hasMxRecord(email: string): Promise<boolean> {
+  try {
+    const domain = email.split('@')[1];
+    if (!domain) return false;
+    const records = await dnsResolve(domain, 'MX');
+    return records.length > 0;
+  } catch (err: any) {
+    // ENODATA = domaine sans enregistrement MX / ENOTFOUND = domaine inexistant
+    if (err?.code === 'ENODATA' || err?.code === 'ENOTFOUND') return false;
+    // Erreur réseau → on laisse passer pour ne pas bloquer l'inscription
+    return true;
+  }
+}
+
 // ── POST /api/auth/register ───────────────────────────────────────────────────
 
 authRouter.post('/register', async (req: Request, res: Response): Promise<void> => {
@@ -50,6 +70,13 @@ authRouter.post('/register', async (req: Request, res: Response): Promise<void> 
 
   const { email, password, name } = parsed.data;
 
+  // Vérifie que le domaine de l'email possède un enregistrement MX (email livrable)
+  const validDomain = await hasMxRecord(email);
+  if (!validDomain) {
+    res.status(400).json({ error: 'Adresse email invalide ou inexistante. Utilisez une vraie adresse email.' });
+    return;
+  }
+
   if (findByEmail(email)) {
     res.status(409).json({ error: 'Cet email est déjà utilisé' });
     return;
@@ -60,18 +87,20 @@ authRouter.post('/register', async (req: Request, res: Response): Promise<void> 
     email,
     passwordHash,
     name: name?.trim() || email.split('@')[0] || 'Utilisateur',
+    isEmailVerified: false,
   });
 
   const token = signToken(user.id, user.email);
 
-  // Email de bienvenue (non bloquant)
-  sendWelcomeEmail(user.email, user.name).catch((err) =>
-    console.error('[Mailer] Welcome email failed:', err.message)
+  // Envoie l'email de vérification (non bloquant)
+  const verifToken = createEmailVerifToken(user.id);
+  sendVerificationEmail(user.email, user.name, verifToken).catch((err) =>
+    console.error('[Mailer] Verification email failed:', err.message)
   );
 
   res.status(201).json({
     token,
-    user: { id: user.id, email: user.email, name: user.name },
+    user: { id: user.id, email: user.email, name: user.name, isEmailVerified: false },
   });
 });
 
@@ -93,7 +122,15 @@ authRouter.post('/login', async (req: Request, res: Response): Promise<void> => 
   }
 
   const token = signToken(user.id, user.email);
-  res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
+  res.json({
+    token,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      isEmailVerified: user.isEmailVerified ?? true,
+    },
+  });
 });
 
 // ── GET /api/auth/me ──────────────────────────────────────────────────────────
@@ -101,7 +138,62 @@ authRouter.post('/login', async (req: Request, res: Response): Promise<void> => 
 authRouter.get('/me', requireAuth, (req: AuthRequest, res: Response): void => {
   const user = findById(req.userId!);
   if (!user) { res.status(404).json({ error: 'Utilisateur introuvable' }); return; }
-  res.json({ id: user.id, email: user.email, name: user.name, isActive: user.isActive, createdAt: user.createdAt });
+  res.json({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    isActive: user.isActive,
+    createdAt: user.createdAt,
+    isEmailVerified: user.isEmailVerified ?? true, // anciens comptes = vérifiés
+  });
+});
+
+// ── GET /api/auth/verify-email?token=xxx ─────────────────────────────────────
+
+authRouter.get('/verify-email', (req: Request, res: Response): void => {
+  const token = req.query['token'] as string;
+  if (!token) {
+    res.status(400).json({ error: 'Token manquant' });
+    return;
+  }
+
+  const userId = verifyEmailVerifToken(token);
+  if (!userId) {
+    res.status(400).json({ error: 'Lien invalide ou expiré. Demandez un nouveau lien depuis votre dashboard.' });
+    return;
+  }
+
+  updateUser(userId, { isEmailVerified: true });
+  consumeEmailVerifToken(token);
+
+  // Email de bienvenue envoyé une seule fois après confirmation
+  const user = findById(userId);
+  if (user) {
+    sendWelcomeEmail(user.email, user.name).catch((err) =>
+      console.error('[Mailer] Welcome email failed:', err.message)
+    );
+  }
+
+  res.json({ ok: true, message: 'Email confirmé avec succès !' });
+});
+
+// ── POST /api/auth/resend-verification ───────────────────────────────────────
+
+authRouter.post('/resend-verification', requireAuth, (req: AuthRequest, res: Response): void => {
+  const user = findById(req.userId!);
+  if (!user) { res.status(404).json({ error: 'Utilisateur introuvable' }); return; }
+
+  if (user.isEmailVerified) {
+    res.status(400).json({ error: 'Votre email est déjà vérifié.' });
+    return;
+  }
+
+  const verifToken = createEmailVerifToken(user.id);
+  sendVerificationEmail(user.email, user.name, verifToken).catch((err) =>
+    console.error('[Mailer] Resend verification failed:', err.message)
+  );
+
+  res.json({ message: 'Email de vérification renvoyé.' });
 });
 
 // ── POST /api/auth/forgot-password ───────────────────────────────────────────
