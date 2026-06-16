@@ -1,4 +1,4 @@
-# SafeHaven — Guide complet du projet
+# Safe Haven Money — Guide complet du projet
 
 > Document de référence technique. Explique comment fonctionne chaque partie du code,
 > pourquoi elle a été conçue ainsi, et où aller pour effectuer des modifications.
@@ -22,9 +22,10 @@
 
 ## 1. Vue d'ensemble
 
-**SafeHaven** est une application web de finance personnelle propulsée par l'IA.
+**Safe Haven Money** est une application web de finance personnelle propulsée par l'IA.
 Elle a été conçue pour les populations non bancarisées d'Afrique et d'Amérique Latine,
 mais elle est utilisable par n'importe qui.
+Déployée en production : Vercel (frontend) + Railway (backend).
 
 ### Ce que fait l'application
 
@@ -426,45 +427,41 @@ projet/
 │   ├── index.css             ← Styles globaux Tailwind
 │   │
 │   ├── lib/
-│   │   ├── AuthContext.jsx   ← État global d'authentification
-│   │   ├── api.js            ← Client HTTP vers le backend
-│   │   ├── courseProgress.js ← Suivi progression cours (localStorage)
-│   │   ├── query-client.js   ← Configuration React Query
-│   │   ├── utils.js          ← Utilitaires (cn pour Tailwind)
-│   │   ├── jupiterSwap.js    ← Intégration Jupiter (swap Solana)
-│   │   └── lifiRoutes.js     ← Utilitaires routes LI.FI
+│   │   ├── AuthContext.jsx      ← État global d'authentification (useAuth)
+│   │   ├── LanguageContext.jsx  ← i18n EN/FR/ES (useLanguage, t(), switchLang)
+│   │   ├── api.js               ← Client HTTP vers le backend (JWT auto)
+│   │   ├── courseProgress.js    ← Progression + XP + Niveaux (localStorage)
+│   │   ├── query-client.js      ← Configuration React Query
+│   │   └── utils.js             ← Utilitaires (cn pour Tailwind)
 │   │
 │   ├── hooks/
 │   │   ├── useSolana.js      ← Hook wallet Phantom/Solana
 │   │   └── use-mobile.jsx    ← Détection mobile (breakpoint)
 │   │
 │   ├── pages/
-│   │   ├── LoginPage.jsx     ← Page de connexion
+│   │   ├── LoginPage.jsx     ← Page de connexion (logo SHM)
 │   │   ├── RegisterPage.jsx  ← Page de création de compte
-│   │   ├── EducationalHub.jsx← Hub d'éducation (cours, quiz, XP)
+│   │   ├── ForgotPasswordPage.jsx ← Réinitialisation par email
+│   │   ├── ResetPasswordPage.jsx  ← Nouveau mot de passe via token
+│   │   ├── EducationalHub.jsx← Skill tree gamifié (5 mondes, XP, quiz trilingue)
 │   │   └── dashboard/
-│   │       ├── DashboardLayout.jsx ← Layout sidebar + header mobile
-│   │       ├── Overview.jsx        ← Vue d'ensemble (stats)
+│   │       ├── DashboardLayout.jsx ← Sidebar + LanguageSwitcher + nav traduit
+│   │       ├── Overview.jsx        ← Stats multilingues (isLessonRead correct)
 │   │       ├── Education.jsx       ← Re-export de EducationalHub
-│   │       ├── Platform.jsx        ← Plateforme DeFi
-│   │       ├── AIChat.jsx          ← Chat IA streaming
-│   │       └── Settings.jsx        ← Paramètres & déconnexion
+│   │       ├── Platform.jsx        ← Logo SHM + MarketMonitor + LiFiWidget (i18n)
+│   │       ├── AIChat.jsx          ← Chat IA streaming (lang depuis useLanguage)
+│   │       └── Settings.jsx        ← Paramètres & déconnexion (multilingue)
 │   │
 │   ├── components/
+│   │   ├── LanguageSwitcher.jsx    ← Boutons 🇬🇧 EN / 🇫🇷 FR / 🇪🇸 ES
 │   │   ├── MarketMonitor.jsx       ← Surveillance SOL (prix, risque)
 │   │   ├── VoiceFinanceCoach.jsx   ← Widget ElevenLabs ConvAI
 │   │   ├── LiFiWalletWidget.jsx    ← Widget d'échange cross-chain
 │   │   ├── WalletSelector.jsx      ← Sélecteur de portefeuille
 │   │   └── ui/                     ← 30+ composants shadcn/ui
-│   │       ├── button.jsx
-│   │       ├── card.jsx
-│   │       ├── input.jsx
-│   │       ├── label.jsx
-│   │       ├── tabs.jsx
-│   │       └── ... (tous réutilisables)
 │   │
 │   └── data/
-│       └── coursesData.js          ← Contenu des cours (JSON statique)
+│       └── coursesData.js     ← 5 mondes × 5 leçons, trilingue EN/FR/ES
 │
 ├── vite.config.js            ← Config Vite (alias @/, proxy API)
 ├── package.json              ← Dépendances
@@ -477,7 +474,8 @@ projet/
 
 Ce fichier est le cœur du frontend. Il configure :
 
-1. **Les Providers** (dans l'ordre d'imbrication) :
+1. **Les Providers** (dans l'ordre d'imbrication, important) :
+   - `LanguageProvider` : i18n EN/FR/ES — **doit être le plus externe**
    - `AuthProvider` : gère l'état de connexion global
    - `QueryClientProvider` : gère le cache des requêtes API (React Query)
    - `BrowserRouter` : active la navigation URL
@@ -552,26 +550,63 @@ En production, mettre l'URL complète dans `VITE_AGENT_URL`.
 
 ---
 
-### `projet/src/lib/courseProgress.js` — Suivi des cours
+### `projet/src/lib/LanguageContext.jsx` — Internationalisation
 
-Gère la progression de l'utilisateur dans les cours.
+Système i18n maison sans dépendance externe.
+
+**Hook :** `const { lang, t, switchLang } = useLanguage()`
+**Langues :** `'en'` (défaut), `'fr'`, `'es'`
+**Stockage :** `localStorage['shm_lang']`
+
+```javascript
+t('nav.overview')     // → 'Overview' / 'Vue d'ensemble' / 'Resumen'
+t('edu.next_lesson')  // → 'Next lesson →' / 'Leçon suivante →' / 'Siguiente lección →'
+switchLang('fr')      // change la langue partout dans l'app
+```
+
+**Clés disponibles :** `nav.*`, `common.*`, `edu.*`, `overview.*`, `settings.*`, `auth.*`, `voice.*`
+
+**⚠️ Important :** `LanguageProvider` doit englober `AuthProvider` dans `App.jsx`.
+
+---
+
+### `projet/src/lib/courseProgress.js` — Suivi des cours + XP
+
+Gère la progression et le système d'expérience.
 **Tout est stocké dans `localStorage`** (côté navigateur, pas en base de données).
 
 | Clé localStorage | Contenu |
 |---|---|
-| `safehaven_course_progress_v1` | JSON : `{ courseId: { lessonId: true/false } }` |
-| `safehaven_course_quiz_scores_v1` | JSON : `{ courseId: { lessonId: score% } }` |
+| `safehaven_course_progress_v1` | JSON : `{ worldId: { lessonId: true } }` |
+| `safehaven_course_quiz_scores_v1` | JSON : `{ worldId: { lessonId: score% } }` |
+| `shm_xp` | XP total cumulé (string numérique) |
 
 **Fonctions disponibles :**
 
 | Fonction | Description |
 |---|---|
-| `isLessonRead(courseId, lessonId)` | La leçon a-t-elle été marquée comme lue ? |
+| `isLessonRead(courseId, lessonId)` | La leçon a-t-elle été complétée ? |
 | `markLessonRead(courseId, lessonId, read)` | Marque/démarque une leçon |
 | `getCourseProgress(courseId)` | Retourne `{ completed, total }` |
 | `setLessonScore(courseId, lessonId, scorePercent)` | Enregistre le score d'un quiz |
 | `getLessonScore(courseId, lessonId)` | Retourne le score ou `null` |
-| `getCourseScoreSummary(courseId)` | Retourne `{ answered, avgScore }` |
+| `getTotalXP()` | Retourne le total XP depuis localStorage |
+| `addXP(amount)` | Ajoute des XP et sauvegarde |
+| `getLevel()` | Retourne `{ level, name, xp, nextLevelXP }` |
+| `isWorldUnlocked(worldIndex)` | World 0 = toujours libre, N = 5 leçons du précédent |
+
+**Niveaux :**
+
+| Niveau | Nom | XP requis |
+|---|---|---|
+| 1 | Novice | 0 |
+| 2 | Apprentice | 200 |
+| 3 | Saver | 500 |
+| 4 | Investor | 1000 |
+| 5 | DeFi Master | 2000 |
+
+**⚠️ Ne pas utiliser `getCourseProgress().completed` dans Overview** —
+utiliser `isLessonRead()` par leçon (getCourseProgress comptait mal les leçons non tentées).
 
 ---
 
@@ -769,31 +804,40 @@ Tableau de bord principal. Affiche :
 
 **Fichier principal :** `projet/src/pages/EducationalHub.jsx`
 
-Page la plus riche de l'application. Elle contient deux onglets :
+Page de type **skill tree gamifié**, inspirée des jeux vidéo. Fond `#060d1a`, style néon.
 
-#### Onglet "Education"
+#### Structure des données (`coursesData.js`)
 
-**Colonne gauche — Parcours d'apprentissage** :
-- Liste des 4 étapes du parcours (Budget, Épargne, Stablecoin, Wallet)
-- Indicateur de complétion par étape
-- Score XP total
+5 mondes × 5 leçons (4 normales + 1 boss) = **25 leçons**, tout trilingue EN/FR/ES :
 
-**Colonne centrale — Salle de cours** :
-- Contenu de la leçon sélectionnée (texte complet)
-- Statut (en cours / terminé)
-- Bouton "Marquer comme lu"
-- Quiz interactif avec validation de réponse et sauvegarde du score
+| Monde | Thème | Accent couleur |
+|---|---|---|
+| world1 | 💰 Money Fundamentals | Amber |
+| world2 | 🛡️ Protect Your Money | Cyan |
+| world3 | ⛓️ Blockchain & Wallets | Violet |
+| world4 | 🌾 DeFi & Yields | Emerald |
+| world5 | 🌉 Bridge & Grow | Rose |
 
-**Colonne droite — Jeu** :
-- 4 modules ludiques (Mission USDC, Budget Boost, Risk Wheel, Weekly Streak)
-- Défi du jour
+#### Layout
+- **Sans leçon sélectionnée** : grille 1/2/3 colonnes
+- **Avec leçon sélectionnée** : flex-row sur md+ (WorldMaps à gauche, panneau 400px à droite)
+- **Mobile** : toujours empilé verticalement
 
-#### Onglet "Platform" (dans EducationalHub)
+#### Fonctionnalités quiz
+- Bonne réponse : +XP complet + bouton **"Leçon suivante →"**
+- Skip : +50% XP + bouton "Leçon suivante →"
+- Mauvaise réponse : bouton Retry, pas de progression
+- `key={lesson.id}` sur QuizSection → reset complet état entre leçons
 
-Combinaison de `MarketMonitor` + `LiFiWalletWidget`.
+#### Règles de déverrouillage
+- World 1 : toujours accessible
+- World N : déverrouillé quand les 5 leçons du World N-1 sont terminées
+- Boss : déverrouillé quand les 4 leçons normales du monde sont terminées
 
-> **Note :** La page `Platform` du dashboard (`/dashboard/platform`) est
-> distincte et affiche la même chose avec un header de page propre.
+#### Header XP
+- Barre XP avec gradient bleu → cyan
+- Badge niveau coloré (Novice gris → DeFi Master violet)
+- Compteur leçons terminées / total
 
 ---
 
@@ -802,8 +846,9 @@ Combinaison de `MarketMonitor` + `LiFiWalletWidget`.
 **Fichier :** `projet/src/pages/dashboard/Platform.jsx`
 
 Affiche :
-1. **MarketMonitor** : données de marché SOL en temps réel, bouton "Auto-Secure"
-2. **LiFiWalletWidget** : widget d'échange SOL → USDC
+1. **Header** : logo Safe Haven Money + titre traduit (EN/FR/ES)
+2. **MarketMonitor** : données de marché SOL en temps réel, bouton "Auto-Secure"
+3. **LiFiWalletWidget** : widget d'échange SOL → USDC
 
 En mode démo (pas de vrai wallet connecté), les transactions sont simulées.
 
@@ -1150,4 +1195,34 @@ Servir le dossier `dist/` avec Nginx ou Vercel.
 
 ---
 
-*Document généré le 10 juin 2026 — SafeHaven v1.0*
+---
+
+## Où chercher pour modifier la langue
+
+### "Je veux ajouter une clé de traduction"
+
+→ `projet/src/lib/LanguageContext.jsx`
+Ajouter la clé dans les 3 objets `en`, `fr`, `es` :
+```javascript
+// Dans en:
+'ma.cle': 'My text',
+// Dans fr:
+'ma.cle': 'Mon texte',
+// Dans es:
+'ma.cle': 'Mi texto',
+```
+Puis l'utiliser dans le composant avec `const { t } = useLanguage(); t('ma.cle')`
+
+### "Je veux changer la langue par défaut"
+
+→ `projet/src/lib/LanguageContext.jsx`, ligne `return 'en'` dans l'init state.
+
+### "Je veux ajouter une nouvelle langue"
+
+1. Ajouter l'objet de traduction dans `TRANSLATIONS` (LanguageContext.jsx)
+2. Ajouter le code langue dans la validation : `['en', 'fr', 'es', 'xx'].includes(saved)`
+3. Ajouter le bouton dans `LanguageSwitcher.jsx`
+
+---
+
+*Document mis à jour le 16 juin 2026 — Safe Haven Money v2.0*

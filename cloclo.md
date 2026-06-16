@@ -1,120 +1,26 @@
-# CLOCLO — Contexte complet du projet SafeHaven
+# CLOCLO — Contexte complet du projet SafeHaven Money
 # Fichier à envoyer à Claude en début de conversation pour recharger tout le contexte.
-# Dernière mise à jour : 10 juin 2026
+# Dernière mise à jour : 16 juin 2026
 
 ---
 
 ## QUI EST KHEIRA
 
-Kheira est la développeuse et propriétaire du projet SafeHaven Money (SHM).
+Kheira est la développeuse et propriétaire du projet Safe Haven Money (SHM).
 Quand elle envoie ce fichier, tu dois immédiatement comprendre l'intégralité du projet
 sans avoir besoin de relire les fichiers sources. Tu peux aller directement au travail.
 
 ---
 
-## CE QUI A ÉTÉ FAIT (historique complet)
+## ÉTAT ACTUEL DU PROJET (v2)
 
-### Session 1 — Refactoring complet du projet
+Le projet s'appelle désormais **Safe Haven Money** (plus "SafeHaven").
+Il est **déployé en production** sur :
+- **Frontend** : Vercel → `https://safe-haven-z92f.vercel.app`
+- **Backend** : Railway → `https://safehaven-production-*.railway.app`
 
-**Demande initiale :** Reprendre tout le projet, supprimer le superflu, créer une architecture
-solide, sécuriser le code, créer une interface avec login/mot de passe et dashboard.
-
-**Actions réalisées :**
-
-#### Backend (`agent/`) — Ajout de l'authentification
-- Créé `agent/src/auth/users.ts` : stockage des utilisateurs en JSON (`agent/data/users.json`)
-- Créé `agent/src/auth/middleware.ts` : vérification JWT sur les routes protégées
-- Créé `agent/src/routes/auth.ts` : POST /register, POST /login, GET /me
-- Modifié `agent/src/index.ts` : montage de authRouter, CORS élargi pour port 5173
-- Modifié `agent/package.json` : ajout de `bcryptjs` + `@types/bcryptjs`
-- Installé `bcryptjs` via npm
-- Créé `agent/.env` avec toutes les variables nécessaires (ANTHROPIC_API_KEY à remplir)
-- **Bug corrigé** : `crypto.randomUUID()` non global Node 18 → `import { randomUUID } from 'node:crypto'`
-
-#### Frontend (`projet/`) — Nettoyage + rebuild complet
-
-**Packages supprimés :** `@base44/sdk`, `@base44/vite-plugin`
-
-**Fichiers créés :**
-- `src/lib/api.js` : client HTTP fetch avec JWT automatique + export `post()`
-- `src/lib/AuthContext.jsx` : contexte auth JWT (useAuth hook)
-- `src/pages/LoginPage.jsx` : formulaire connexion + lien "Mot de passe oublié"
-- `src/pages/RegisterPage.jsx` : formulaire inscription + spinner + banner succès
-- `src/pages/ForgotPasswordPage.jsx` : demande réinitialisation mot de passe
-- `src/pages/ResetPasswordPage.jsx` : nouveau mot de passe via token URL
-- `src/pages/dashboard/DashboardLayout.jsx` : sidebar + header mobile
-- `src/pages/dashboard/Overview.jsx` : stats, XP, actions rapides
-- `src/pages/dashboard/Education.jsx` : re-export EducationalHub
-- `src/pages/dashboard/Platform.jsx` : MarketMonitor + LiFiWidget
-- `src/pages/dashboard/AIChat.jsx` : chat streaming Claude
-- `src/pages/dashboard/Settings.jsx` : profil + déconnexion
-
-**Fichiers modifiés :**
-- `src/App.jsx` : routeur propre avec ProtectedRoute / PublicOnlyRoute + routes forgot/reset
-- `src/lib/PageNotFound.jsx` : nettoyé (suppression base44)
-- `src/pages/EducationalHub.jsx` : bug `setGuardMessage` corrigé
-- `vite.config.js` : suppression plugin base44, alias `@/` configuré
-
-**Build vérifié :** `npm run build` → succès, zéro erreur
-
-### Session 3 — Panel Administrateur
-
-**Demande :** Accès admin pour gérer la plateforme (utilisateurs, stats, désactivation, suppression)
-
-**Actions réalisées :**
-
-#### Backend (`agent/`)
-- Ajouté `isActive: boolean` dans l'interface `User` (`users.ts`) — pas de rôle côté user
-- Ajouté `updateUser()`, `deleteUser()`, `listUsers()` dans `users.ts`
-- `requireAuth` vérifie `isActive` → 403 si compte désactivé
-- Admin = identifiants fixes dans `.env` : `ADMIN_USERNAME=Kheira_Mialy` + `ADMIN_PASSWORD=KMSHM2k26`
-- `signAdminToken()` → JWT avec `{ isAdmin: true }`, durée 12h
-- `requireAdmin` vérifie `isAdmin: true` dans le JWT (complètement séparé des comptes utilisateurs)
-- Créé `routes/admin.ts` :
-  - `POST /api/admin/login` → vérifie identifiants fixes → retourne `adminToken`
-  - `GET /api/admin/users` → liste tous les comptes (sans passwordHash)
-  - `PATCH /api/admin/users/:id` → modifier `isActive` seulement
-  - `DELETE /api/admin/users/:id` → supprimer un compte
-  - `GET /api/admin/stats` → total, actifs, inactifs, 7j, 30j, derniers inscrits
-- Mis à jour `index.ts` : montage adminRouter + PATCH/DELETE dans CORS
-- Mis à jour `agent/.env` : `ADMIN_USERNAME` + `ADMIN_PASSWORD`
-
-#### Frontend (`projet/`)
-- Ajouté helpers `get/post/patch/del()` + `adminGet/adminPost/adminPatch/adminDel()` dans `api.js`
-  - Les helpers admin utilisent `localStorage['safehaven_admin_token']` (token séparé)
-- Créé `pages/admin/AdminLogin.jsx` : formulaire login admin (fond sombre, couronne dorée)
-- Créé `pages/admin/AdminPage.jsx` : panel admin complet
-  - Onglet **Statistiques** : 4 cards + derniers inscrits
-  - Onglet **Utilisateurs** : tableau avec toggle actif/inactif + suppression (pas de promotion admin)
-  - Bouton déconnexion admin (supprime `safehaven_admin_token`)
-- Mis à jour `App.jsx` :
-  - `AdminRoute` vérifie `safehaven_admin_token` → redirige vers `/admin/login` si absent
-  - Routes `/admin/login` et `/admin` ajoutées
-- `DashboardLayout.jsx` : aucun lien admin dans la sidebar (admin accède à `/admin` directement)
-
-### Session 2 — Email + Mot de passe oublié + UX inscription
-
-**Demande :** Création longue sans feedback + email de confirmation + onglet récupération mot de passe + mise à jour docs
-
-**Actions réalisées :**
-
-#### Backend (`agent/`)
-- Installé `nodemailer` + `@types/nodemailer`
-- Créé `agent/src/auth/mailer.ts` : envoi email welcome + reset (dev = log console, prod = SMTP)
-- Créé `agent/src/auth/resetTokens.ts` : tokens reset 32 octets hex, TTL 1h, stockés dans `agent/data/reset-tokens.json`
-- Ajouté `updatePassword(id, hash)` dans `agent/src/auth/users.ts`
-- Mis à jour `agent/src/routes/auth.ts` :
-  - POST /register → appelle `sendWelcomeEmail` (non bloquant)
-  - POST /forgot-password → crée token + envoie `sendResetEmail` (réponse identique user existant ou non)
-  - POST /reset-password → vérifie token, change hash, consomme token
-
-#### Frontend (`projet/`)
-- `RegisterPage.jsx` : spinner Loader2 pendant création + banner vert succès "Compte créé !" + redirection 2s
-- `LoginPage.jsx` : ajout lien "Mot de passe oublié ?" sous le champ mot de passe
-- `ForgotPasswordPage.jsx` : page dédiée avec état succès + lien retour connexion
-- `ResetPasswordPage.jsx` : lit `?token=` dans URL, change le mot de passe, redirige login 3s
-- `App.jsx` : routes `/forgot-password` et `/reset-password` ajoutées (publiques)
-- `api.js` : export `post(path, body)` ajouté pour usage direct dans les nouvelles pages
+La variable `VITE_AGENT_URL` dans Vercel pointe vers l'URL Railway.
+Le CORS Railway doit lister l'URL Vercel dans `CORS_ORIGINS` (sans slash final).
 
 ---
 
@@ -124,18 +30,19 @@ solide, sécuriser le code, créer une interface avec login/mot de passe et dash
 SHM/
 ├── agent/                    ← Backend Node.js + TypeScript (port 3001)
 │   ├── src/
-│   │   ├── index.ts          ← Serveur Express (Helmet, CORS, rate-limit)
+│   │   ├── index.ts          ← Serveur Express (API only, pas de static files)
 │   │   ├── auth/
 │   │   │   ├── users.ts      ← Store JSON utilisateurs + updatePassword()
-│   │   │   ├── middleware.ts ← Vérification JWT (requireAuth, signToken)
-│   │   │   ├── mailer.ts     ← Envoi emails welcome + reset (nodemailer)
-│   │   │   └── resetTokens.ts← Tokens réinit. mot de passe (TTL 1h)
+│   │   │   ├── middleware.ts ← JWT (requireAuth, requireAdmin, signToken)
+│   │   │   ├── mailer.ts     ← Emails welcome + reset (dev=console, prod=SMTP)
+│   │   │   └── resetTokens.ts← Tokens reset 32 octets, TTL 1h
 │   │   ├── routes/
 │   │   │   ├── auth.ts       ← /api/auth : register, login, me, forgot, reset
+│   │   │   ├── admin.ts      ← /api/admin : users, stats (admin JWT séparé)
 │   │   │   ├── chat.ts       ← /api/chat : streaming SSE Claude
 │   │   │   ├── risk.ts       ← /api/risk-profile
 │   │   │   ├── strategies.ts ← /api/strategies
-│   │   │   ├── voice.ts      ← /api/voice : ElevenLabs TTS
+│   │   │   ├── voice.ts      ← /api/voice : ElevenLabs TTS (multilingue EN/FR/ES)
 │   │   │   └── yields.ts     ← /api/yields : APY DeFi
 │   │   ├── llm/
 │   │   │   ├── claude.ts     ← Client Anthropic (stream + non-stream)
@@ -148,60 +55,271 @@ SHM/
 │   │   │   └── guardrails.ts ← Filtres anti-levier, anti-arnaque, PII
 │   │   └── strategies/
 │   │       ├── library.ts    ← Catalogue stratégies DeFi (Kamino, MarginFi)
-│   │       ├── conservative.ts ← Règles + APY
-│   │       ├── recommend.ts  ← Moteur recommandation
-│   │       └── lifi.ts       ← Routes LI.FI
+│   │       ├── conservative.ts
+│   │       ├── recommend.ts
+│   │       └── lifi.ts
 │   ├── data/
 │   │   ├── users.json        ← Créé automatiquement au 1er register
 │   │   └── reset-tokens.json ← Créé automatiquement à la 1ère demande reset
-│   ├── .env                  ← Variables d'env (ANTHROPIC_API_KEY à remplir)
+│   ├── railway.toml          ← Config Railway (agent uniquement, pas de cd ../projet)
 │   └── package.json
 │
 ├── projet/                   ← Frontend React + Vite (port 5173)
+│   ├── public/
+│   │   └── logo.svg          ← Logo Safe Haven Money (bouclier bleu + ondes cyan + $)
 │   ├── src/
-│   │   ├── App.jsx           ← Routeur + Providers (Auth, QueryClient, Router)
-│   │   ├── main.jsx          ← Point d'entrée React
+│   │   ├── App.jsx           ← Routeur + Providers (Language > Auth > QueryClient > Router)
 │   │   ├── lib/
-│   │   │   ├── AuthContext.jsx   ← useAuth() : user, login, logout, register
-│   │   │   ├── api.js            ← fetch wrapper avec JWT auto + export post()
-│   │   │   ├── courseProgress.js ← Progression cours (localStorage)
-│   │   │   ├── query-client.js   ← React Query config
-│   │   │   └── utils.js          ← cn() Tailwind helper
-│   │   ├── hooks/
-│   │   │   ├── useSolana.js      ← Wallet Phantom connect/sign
-│   │   │   └── use-mobile.jsx    ← Breakpoint mobile
-│   │   ├── pages/
-│   │   │   ├── LoginPage.jsx         ← /login (+ lien mot de passe oublié)
-│   │   │   ├── RegisterPage.jsx      ← /register (spinner + banner succès)
-│   │   │   ├── ForgotPasswordPage.jsx← /forgot-password
-│   │   │   ├── ResetPasswordPage.jsx ← /reset-password?token=...
-│   │   │   ├── EducationalHub.jsx    ← Cours + quiz + XP + Market + LiFi
-│   │   │   └── dashboard/
-│   │   │       ├── DashboardLayout.jsx ← Sidebar slate-900 + outlet
-│   │   │       ├── Overview.jsx        ← /dashboard (stats + actions)
-│   │   │       ├── Education.jsx       ← /dashboard/education
-│   │   │       ├── Platform.jsx        ← /dashboard/platform
-│   │   │       ├── AIChat.jsx          ← /dashboard/chat (SSE streaming)
-│   │   │       └── Settings.jsx        ← /dashboard/settings
+│   │   │   ├── AuthContext.jsx      ← useAuth() : user, login, logout, register
+│   │   │   ├── LanguageContext.jsx  ← useLanguage() : lang, t(), switchLang() — EN/FR/ES
+│   │   │   ├── api.js               ← fetch wrapper JWT auto + api.auth.*
+│   │   │   ├── courseProgress.js    ← Progression cours + XP + Levels (localStorage)
+│   │   │   ├── query-client.js      ← React Query config
+│   │   │   └── utils.js             ← cn() Tailwind helper
 │   │   ├── components/
-│   │   │   ├── MarketMonitor.jsx   ← Prix SOL temps réel (CoinGecko)
-│   │   │   ├── VoiceFinanceCoach.jsx ← ElevenLabs ConvAI widget
-│   │   │   ├── LiFiWalletWidget.jsx  ← Widget échange cross-chain
-│   │   │   ├── WalletSelector.jsx    ← Sélecteur portefeuille
-│   │   │   └── ui/                   ← 30+ composants shadcn/ui (Radix)
+│   │   │   ├── LanguageSwitcher.jsx ← 3 boutons drapeaux EN/FR/ES
+│   │   │   ├── MarketMonitor.jsx    ← Prix SOL temps réel (CoinGecko)
+│   │   │   ├── VoiceFinanceCoach.jsx← ElevenLabs ConvAI widget
+│   │   │   ├── LiFiWalletWidget.jsx ← Widget échange cross-chain
+│   │   │   ├── WalletSelector.jsx   ← Sélecteur portefeuille
+│   │   │   └── ui/                  ← 30+ composants shadcn/ui (Radix)
+│   │   ├── pages/
+│   │   │   ├── LoginPage.jsx
+│   │   │   ├── RegisterPage.jsx
+│   │   │   ├── ForgotPasswordPage.jsx
+│   │   │   ├── ResetPasswordPage.jsx
+│   │   │   ├── EducationalHub.jsx        ← Skill tree gamifié (FICHIER PRINCIPAL)
+│   │   │   └── dashboard/
+│   │   │       ├── DashboardLayout.jsx   ← Sidebar + LanguageSwitcher + nav traduit
+│   │   │       ├── Overview.jsx          ← Stats multilingues + isLessonRead() correct
+│   │   │       ├── Education.jsx         ← Re-export de EducationalHub
+│   │   │       ├── Platform.jsx          ← Logo SHM + MarketMonitor + LiFiWidget + i18n
+│   │   │       ├── AIChat.jsx            ← Chat IA SSE, lang depuis useLanguage()
+│   │   │       └── Settings.jsx          ← Paramètres multilingues
 │   │   └── data/
-│   │       └── coursesData.js        ← Contenu statique des cours
-│   ├── vite.config.js         ← alias @/ → src/, proxy /api → :3001
-│   └── package.json
+│   │       └── coursesData.js            ← 5 mondes × 5 leçons, trilingue EN/FR/ES
+│   ├── index.html             ← Titre "Safe Haven Money", favicon logo.svg
+│   └── vite.config.js         ← alias @/ → src/, proxy /api → :3001
 │
-├── app/                      ← React Native Expo (mobile, non modifié)
-├── contracts/                ← Solana Anchor (smart contracts, non modifié)
-├── docs/                     ← ADR, threat model, accessibilité
-├── GUIDE_PROJET.md           ← Documentation technique complète
-├── kheira.md                 ← Guide complet mis à jour
-├── cloclo.md                 ← CE FICHIER (contexte Claude)
-└── .env.example              ← Template variables globales
+├── railway.toml               ← Config Railway racine (fullstack si besoin)
+├── GUIDE_PROJET.md            ← Doc technique complète
+├── kheira.md                  ← Guide technique mis à jour
+└── cloclo.md                  ← CE FICHIER
 ```
+
+---
+
+## SYSTÈME MULTILINGUE (ajouté en session 4)
+
+**Fichier :** `projet/src/lib/LanguageContext.jsx`
+
+- Langues : `en` (défaut), `fr`, `es`
+- Stockage : `localStorage['shm_lang']`
+- Hook : `const { lang, t, switchLang } = useLanguage()`
+- `t('clé')` retourne la traduction dans la langue active
+- Fallback : EN si la clé n'existe pas dans la langue demandée
+
+**Provider order dans App.jsx :**
+```jsx
+<LanguageProvider>       ← EN PREMIER (avant AuthProvider)
+  <AuthProvider>
+    <QueryClientProvider>
+      <BrowserRouter>...</BrowserRouter>
+    </QueryClientProvider>
+  </AuthProvider>
+</LanguageProvider>
+```
+
+**Clés de traduction disponibles :**
+- `nav.*` : navigation sidebar (overview, education, platform, chat, settings, logout)
+- `common.*` : boutons génériques (start, continue, next, back, check, correct, wrong, skip, locked)
+- `edu.*` : éducation (world1-5, xp_earned, level_up, chapter_complete, boss_challenge, levels, next_lesson)
+- `overview.*` : page Overview (welcome, subtitle, quick_actions, mission_title, mission_body)
+- `settings.*` : page Settings (title, subtitle, profile, security, about, etc.)
+- `auth.*` : pages auth (login_title, register_title, email, password, etc.)
+- `voice.*` : placeholder chat vocal
+
+**Switcher :** `LanguageSwitcher.jsx` — 3 boutons drapeaux EN/FR/ES, affiché dans sidebar desktop + header mobile
+
+---
+
+## EDUCATIONAL HUB — SKILL TREE (redesign session 4)
+
+**Fichier :** `projet/src/pages/EducationalHub.jsx`
+
+Design inspiré jeu vidéo : fond `#060d1a` (bleu très sombre), style sci-fi/néon.
+
+### Structure des données (`coursesData.js`)
+```javascript
+[
+  {
+    id: 'world1',
+    title: { en: '💰 Money Fundamentals', fr: '💰 Bases de l\'Argent', es: '...' },
+    lessons: [
+      {
+        id: 'l1',
+        title: { en, fr, es },
+        content: { en, fr, es },   // texte long de la leçon
+        xp: 50,
+        quiz: {
+          question: { en, fr, es },
+          options: [{ en, fr, es }, ...],  // 4 options
+          correctIndex: 0
+        }
+      },
+      // ... 3 autres leçons normales
+      { id: 'boss', isChallenge: true, xp: 150, ... }  // boss final
+    ]
+  },
+  // world2, world3, world4, world5
+]
+```
+
+5 mondes : world1 (Money Fundamentals), world2 (Protect Your Money),
+world3 (Blockchain & Wallets), world4 (DeFi & Yields), world5 (Bridge & Grow)
+
+### Composants internes
+
+| Composant | Rôle |
+|-----------|------|
+| `XPBar` | Barre XP avec gradient bleu → cyan |
+| `LevelBadge` | Badge niveau (1-5) avec couleur selon niveau |
+| `LessonNode` | Carte leçon avec statut : locked / available / completed / boss |
+| `VerticalConnector` | Trait pointillé vertical entre leçons |
+| `HorizontalConnector` | Trait horizontal pour leçons parallèles |
+| `WorldMap` | Carte complète d'un monde (header + skill tree) |
+| `QuizSection` | Quiz interactif avec feedback + bouton "Leçon suivante →" |
+| `LessonPanel` | Panneau droit affichant contenu + quiz |
+
+### Layout
+- Sans leçon sélectionnée : grille 1/2/3 colonnes selon viewport
+- Avec leçon sélectionnée : `flex-row` sur md+ (480px pour WorldMaps, 400px pour LessonPanel côte à côte)
+- Mobile : toujours empilé verticalement
+
+### XP et Niveaux (`courseProgress.js`)
+
+| localStorage key | Contenu |
+|-----------------|---------|
+| `safehaven_course_progress_v1` | `{ worldId: { lessonId: true } }` |
+| `safehaven_course_quiz_scores_v1` | `{ worldId: { lessonId: score% } }` |
+| `shm_xp` | XP total cumulé (nombre) |
+
+| Niveau | Nom | XP requis |
+|--------|-----|-----------|
+| 1 | Novice | 0 |
+| 2 | Apprentice | 200 |
+| 3 | Saver | 500 |
+| 4 | Investor | 1000 |
+| 5 | DeFi Master | 2000 |
+
+Fonctions exportées : `isLessonRead`, `markLessonRead`, `getTotalXP`, `addXP`, `getLevel`, `isWorldUnlocked`
+
+### Règle de déverrouillage des mondes
+- World 1 : toujours déverrouillé
+- World N : déverrouillé quand les 5 leçons du World N-1 sont terminées
+
+### Bug fixes importants (session 5)
+- **Validation auto au clic "Leçon suivante"** : corrigé par `key={lesson.id}` sur `QuizSection`
+  → React recrée le composant à zéro (reset `selected`, `submitted`, `skipped`)
+- **Progress = 0 dans Overview** : corrigé en utilisant `isLessonRead()` par leçon
+  (pas `getCourseProgress()` qui comptait mal)
+
+---
+
+## ADMIN
+
+- URL : `/admin/login` puis `/admin`
+- Identifiants : `Kheira_Mialy` / `KMSHM2k26`
+- Token séparé : `localStorage['safehaven_admin_token']` (JWT 12h, `isAdmin: true`)
+- Fonctionnalités : liste comptes, activer/désactiver, supprimer, stats
+- **RÈGLE ABSOLUE** : jamais de création d'admin via l'interface, seul `Kheira_Mialy` est admin
+
+---
+
+## DÉPLOIEMENT (production)
+
+### Backend — Railway
+- Dossier de build : `agent/`
+- `agent/railway.toml` :
+  ```toml
+  [build]
+  builder = "nixpacks"
+  buildCommand = "npm install --include=dev && npm run build"
+  [deploy]
+  startCommand = "npm start"
+  healthcheckPath = "/health"
+  ```
+- Variables Railway obligatoires :
+  - `ANTHROPIC_API_KEY`, `JWT_SECRET`, `ADMIN_USERNAME=Kheira_Mialy`, `ADMIN_PASSWORD=KMSHM2k26`
+  - `CORS_ORIGINS=https://safe-haven-z92f.vercel.app` (SANS slash final !)
+
+### Frontend — Vercel
+- Dossier de build : `projet/`
+- Variable Vercel obligatoire : `VITE_AGENT_URL=https://[url-railway]` (URL complète du backend)
+- Après tout changement de `VITE_AGENT_URL` : **Redeploy obligatoire** (variable baked à build time)
+
+### Piège CORS connu
+Le code dans `agent/src/index.ts` nettoie les origines :
+```typescript
+.map((o: string) => o.trim().replace(/\/$/, ''))
+```
+Si `CORS_ORIGINS` a un slash final dans Railway → ça ne fonctionnera pas.
+
+---
+
+## ROUTES BACKEND
+
+| Méthode | Route | Auth | Description |
+|---------|-------|------|-------------|
+| POST | /api/auth/register | Non | Créer un compte |
+| POST | /api/auth/login | Non | Connexion → JWT |
+| GET | /api/auth/me | JWT user | Profil utilisateur |
+| POST | /api/auth/forgot-password | Non | Token reset par email |
+| POST | /api/auth/reset-password | Non | Changer mdp avec token |
+| POST | /api/admin/login | Non | Connexion admin → JWT admin |
+| GET | /api/admin/users | JWT admin | Liste comptes |
+| PATCH | /api/admin/users/:id | JWT admin | Activer/désactiver |
+| DELETE | /api/admin/users/:id | JWT admin | Supprimer |
+| GET | /api/admin/stats | JWT admin | Statistiques |
+| POST | /api/chat | Non* | Chat IA streaming SSE |
+| GET | /api/yields | Non* | APY DeFi |
+| GET | /api/strategies | Non* | Stratégies disponibles |
+| POST | /api/voice/synthesize | Non* | TTS ElevenLabs |
+| GET | /health | Non | Statut serveur |
+
+*= pas encore protégées par JWT (prévu v2)
+
+---
+
+## ROUTES FRONTEND
+
+| Route | Accès | Composant |
+|-------|-------|-----------|
+| /login | Public seulement | LoginPage |
+| /register | Public seulement | RegisterPage |
+| /forgot-password | Public | ForgotPasswordPage |
+| /reset-password?token= | Public | ResetPasswordPage |
+| /dashboard | Connecté | Overview |
+| /dashboard/education | Connecté | EducationalHub (via Education.jsx) |
+| /dashboard/platform | Connecté | Platform |
+| /dashboard/chat | Connecté | AIChat |
+| /dashboard/settings | Connecté | Settings |
+| /admin/login | Public | AdminLogin |
+| /admin | Token admin | AdminPage |
+| / et /* | Redirect | /dashboard |
+
+---
+
+## LOCALSTORAGE — TOUTES LES CLÉS
+
+| Clé | Contenu | Qui l'utilise |
+|-----|---------|---------------|
+| `safehaven_token` | JWT utilisateur (7j) | AuthContext |
+| `safehaven_admin_token` | JWT admin (12h) | AdminRoute, adminRequest() |
+| `shm_lang` | Langue active ('en'/'fr'/'es') | LanguageContext |
+| `safehaven_course_progress_v1` | `{ worldId: { lessonId: true } }` | courseProgress.js |
+| `safehaven_course_quiz_scores_v1` | `{ worldId: { lessonId: scorePercent } }` | courseProgress.js |
+| `shm_xp` | XP total (number string) | courseProgress.js |
 
 ---
 
@@ -213,233 +331,84 @@ SHM/
 | Styles | Tailwind CSS + shadcn/ui | Tailwind 3 |
 | Routing | React Router DOM | v6 |
 | Cache API | TanStack React Query | v5 |
+| i18n | Contexte React custom | — (pas de lib externe) |
 | Backend | Node.js + Express + TypeScript | Express 4 |
 | Auth | bcryptjs (12 rounds) + JWT (7j) | — |
 | Email | nodemailer (dev: console, prod: SMTP) | — |
 | LLM | Anthropic Claude | claude-sonnet-4-6 |
-| Voice | ElevenLabs ConvAI widget | — |
+| Voice | ElevenLabs ConvAI widget + TTS | multilingual v2 |
 | DeFi | LI.FI Widget + Kamino + MarginFi | Solana mainnet |
 | Wallet | Phantom via window.solana | web3.js v1 |
 
 ---
 
-## ROUTES BACKEND
-
-| Méthode | Route | Auth | Description |
-|---------|-------|------|-------------|
-| POST | /api/auth/register | Non | Créer un compte + email welcome |
-| POST | /api/auth/login | Non | Connexion → JWT |
-| GET | /api/auth/me | Oui | Profil utilisateur |
-| POST | /api/auth/forgot-password | Non | Demande réinit. (envoie email) |
-| POST | /api/auth/reset-password | Non | Nouveau mdp avec token |
-| GET | /api/admin/users | Admin | Liste tous les comptes |
-| PATCH | /api/admin/users/:id | Admin | Modifier isActive ou role |
-| DELETE | /api/admin/users/:id | Admin | Supprimer un compte |
-| GET | /api/admin/stats | Admin | Statistiques globales |
-| POST | /api/chat | Non* | Chat IA streaming SSE |
-| POST | /api/chat/summarize | Non* | Résumé conversation |
-| POST | /api/risk-profile | Non* | Sauvegarder profil risque |
-| GET | /api/strategies | Non* | Stratégies disponibles |
-| GET | /api/yields | Non* | APY DeFi en temps réel |
-| POST | /api/voice/synthesize | Non* | TTS ElevenLabs |
-| GET | /health | Non | Statut serveur |
-
-*= pas encore protégées par JWT (prévu pour v2)
-
----
-
-## ROUTES FRONTEND
-
-| Route | Accès | Fichier |
-|-------|-------|---------|
-| /login | Public seulement | pages/LoginPage.jsx |
-| /register | Public seulement | pages/RegisterPage.jsx |
-| /forgot-password | Public | pages/ForgotPasswordPage.jsx |
-| /reset-password?token=... | Public | pages/ResetPasswordPage.jsx |
-| /dashboard | Connecté | pages/dashboard/Overview.jsx |
-| /dashboard/education | Connecté | pages/dashboard/Education.jsx |
-| /dashboard/platform | Connecté | pages/dashboard/Platform.jsx |
-| /dashboard/chat | Connecté | pages/dashboard/AIChat.jsx |
-| /dashboard/settings | Connecté | pages/dashboard/Settings.jsx |
-| /admin/login | Public | pages/admin/AdminLogin.jsx |
-| /admin | Token admin requis | pages/admin/AdminPage.jsx |
-| / et /* | → redirect | /dashboard |
-
----
-
-## AUTHENTIFICATION — FONCTIONNEMENT
-
-```
-Register :
-  frontend → POST /api/auth/register { email, password, name }
-  backend  → bcrypt.hash(12) → createUser() → signToken()
-           → sendWelcomeEmail() [non bloquant]
-           → { token, user }
-  frontend → localStorage.setItem('safehaven_token', token)
-  frontend → affiche banner succès 2s → navigate('/dashboard')
-
-Login :
-  frontend → POST /api/auth/login { email, password }
-  backend  → bcrypt.compare() → signToken() → { token, user }
-  frontend → localStorage.setItem('safehaven_token', token) → navigate('/dashboard')
-
-Vérification au chargement :
-  AuthContext monte → lit localStorage
-  → GET /api/auth/me (Bearer token)
-  → success → user chargé
-  → fail   → token supprimé, redirect /login
-
-Logout :
-  localStorage.removeItem('safehaven_token')
-  setUser(null) → navigate('/login')
-
-Mot de passe oublié :
-  /forgot-password → POST /api/auth/forgot-password { email }
-  backend → réponse identique (sécurité), si user existe → createResetToken() → sendResetEmail()
-  email contient : APP_URL/reset-password?token=<hex64chars>
-
-Réinitialisation :
-  /reset-password?token=... → POST /api/auth/reset-password { token, password }
-  backend → verifyResetToken() → bcrypt.hash(12) → updatePassword() → consumeResetToken()
-  frontend → banner succès → redirect /login 3s
-```
-
----
-
-## EMAILS (nodemailer)
-
-En mode développement (SMTP_HOST absent dans .env) :
-- Les emails s'affichent dans la console du backend (pas envoyés vraiment)
-- Log format : `📧 [Mailer DEV] À: ..., Sujet: ...`
-
-En production : configurez SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM dans agent/.env
-
----
-
-## CHAT IA — FONCTIONNEMENT
-
-```
-AIChat.jsx sendMessage() :
-  fetch POST /api/chat { messages[], stream: true, locale: 'fr' }
-  ↓
-agent/routes/chat.ts :
-  guardrails.filterInput()  ← bloque levier, PII, arnaques
-  claude.streamChat()       ← SSE vers Anthropic
-  guardrails.filterOutput() ← nettoie la réponse
-  ↓
-SSE : data: {"chunk":"..."} × N → data: {"done":true}
-  ↓
-AIChat.jsx : accumule chunks → affiche en temps réel
-```
-
----
-
-## SÉCURITÉ EN PLACE
-
-1. **Helmet** : CSP, X-Frame-Options, HSTS
-2. **CORS** : whitelist d'origines (CORS_ORIGINS dans .env)
-3. **Rate limit** : 60 req/min global, 20 req/min sur /api/chat
-4. **bcrypt 12 rounds** : mots de passe jamais en clair
-5. **JWT 7 jours** : signé avec JWT_SECRET
-6. **Zod** : validation stricte de tous les corps de requête
-7. **Guardrails IA** : 6 catégories bloquées + nettoyage PII
-8. **Body limit 512kb** : protection bombes JSON
-9. **Non-custodial** : jamais de clés privées côté serveur
-10. **Tokens reset** : 32 octets aléatoires, TTL 1h, usage unique, 1 token/user max
-11. **Énumération email bloquée** : /forgot-password répond identiquement email existant ou non
-
----
-
-## STOCKAGE DES DONNÉES
-
-| Donnée | Où | Format |
-|--------|----|--------|
-| Comptes utilisateurs | `agent/data/users.json` | JSON (id, email, passwordHash, name, createdAt) |
-| Tokens réinitialisation | `agent/data/reset-tokens.json` | JSON (token, userId, expiresAt) |
-| Token JWT | `localStorage` navigateur | String (clé: safehaven_token) |
-| Progression cours | `localStorage` navigateur | JSON (safehaven_course_progress_v1) |
-| Scores quiz | `localStorage` navigateur | JSON (safehaven_course_quiz_scores_v1) |
-| Adresse wallet Solana | `localStorage` navigateur | String (solana-address) |
-
-Pas de base de données SQL/NoSQL pour l'instant. Tout est fichier JSON (MVP).
-
----
-
-## DÉMARRAGE
-
-### Commande unique (recommandé)
-
-```bash
-cd ~/Documents/SafeHaven\ Money/SHM
-npm run dev
-# → Backend  : http://localhost:3001  (logs cyan)
-# → Frontend : http://localhost:5173  (logs magenta)
-# Arrêt : Ctrl+C
-```
-
-### Autres commandes racine
-
-```bash
-npm run build        # Build backend + frontend
-npm run install:all  # Réinstaller toutes les dépendances
-```
-
-### Accès admin après démarrage
-
-URL : `http://localhost:5173/admin`
-Identifiant : `Kheira_Mialy` — Mot de passe : `KMSHM2k26`
-
----
-
-## VARIABLES D'ENV IMPORTANTES
+## VARIABLES D'ENV (`agent/.env`)
 
 ```env
-# agent/.env
-ANTHROPIC_API_KEY=sk-ant-...        ← OBLIGATOIRE pour le chat IA
-JWT_SECRET=phrase-longue-aleatoire  ← OBLIGATOIRE pour l'auth
+# OBLIGATOIRE
+ANTHROPIC_API_KEY=sk-ant-...
+JWT_SECRET=phrase-aleatoire-longue-minimum-32-chars
+
+# Serveur
 AGENT_PORT=3001
 NODE_ENV=development
 CORS_ORIGINS=http://localhost:5173
 
-# Pour l'envoi d'emails réels (optionnel, dev = console)
-SMTP_HOST=smtp.gmail.com
+# Admin (identifiants fixes — NE PAS MODIFIER LE MOT DE PASSE)
+ADMIN_USERNAME=Kheira_Mialy
+ADMIN_PASSWORD=KMSHM2k26
+
+# Email (vide = mode dev console)
+SMTP_HOST=
 SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=vous@gmail.com
-SMTP_PASS=app-password-gmail
-SMTP_FROM=SafeHaven <vous@gmail.com>
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=Safe Haven Money <noreply@safehaven.app>
 APP_URL=http://localhost:5173
+
+# Optionnel
+ELEVENLABS_VOICE_ID_FR=TX3LPaxmHKxFdv7VOQHJ
+ELEVENLABS_VOICE_ID_EN=...
+LIFI_API_KEY=...
 ```
 
 ---
 
-## CE QUI RESTE À FAIRE / IDÉES FUTURES
+## DÉMARRAGE LOCAL
+
+```bash
+cd ~/Documents/SafeHaven\ Money/SHM
+npm run dev
+# → Backend  : http://localhost:3001
+# → Frontend : http://localhost:5173
+# Admin      : http://localhost:5173/admin (Kheira_Mialy / KMSHM2k26)
+```
+
+---
+
+## CE QUI RESTE À FAIRE (backlog)
 
 - [ ] Protéger /api/chat et autres routes avec JWT (requireAuth)
-- [ ] Modifier le profil utilisateur (nom, mot de passe)
-- [ ] Base de données réelle (SQLite ou PostgreSQL) pour remplacer users.json
-- [ ] Tableau de bord analytics (nb messages IA, temps passé...)
-- [ ] Mode multilingue sur le frontend (i18n)
-- [ ] Tests automatisés frontend (Vitest)
-- [ ] Déploiement Railway (backend) + Vercel (frontend)
+- [ ] Modifier le profil utilisateur (nom, mot de passe) depuis Settings
+- [ ] Base de données réelle (SQLite/PostgreSQL) pour remplacer users.json
+- [ ] Analytics (nb sessions IA, temps passé, progression cours côté serveur)
+- [ ] Progression cours liée au compte serveur (pas juste localStorage)
+- [ ] Tests automatisés (Vitest + Testing Library)
+- [ ] Voix espagnole ElevenLabs (ELEVENLABS_VOICE_ID_ES)
 
----
+## CE QUI EST TERMINÉ ✅
 
-## CONVENTIONS DE CODE
-
-- Frontend : JSX (pas TSX), Tailwind pour les styles, shadcn/ui pour les composants
-- Backend : TypeScript strict, Zod pour la validation, async/await
-- Composants UI réutilisables : toujours dans `projet/src/components/ui/`
-- Alias d'import : `@/` = `projet/src/` (configuré dans vite.config.js)
-- Token localStorage : clé = `safehaven_token`
-- Pas de commentaires inutiles dans le code, noms de variables explicites
-
----
-
-## COMMENT UTILISER CE FICHIER
-
-Envoyer ce fichier à Claude en début de conversation avec ce message :
-"Voici le contexte complet du projet SafeHaven. [coller le contenu ou joindre le fichier]
-Je veux [ta demande]."
-
-Claude aura immédiatement tout le contexte sans avoir besoin de relire les fichiers.
+- [x] Authentification complète (register/login/JWT/forgot-password/reset)
+- [x] Panel admin (Kheira_Mialy uniquement, liste/désactiver/supprimer comptes)
+- [x] Refonte nom → Safe Haven Money + logo SVG
+- [x] Système multilingue EN/FR/ES (LanguageContext + LanguageSwitcher)
+- [x] Educational Hub — skill tree gamifié (5 mondes, 25 leçons, XP, niveaux)
+- [x] Contenu cours trilingue (coursesData.js)
+- [x] Système XP + niveaux (courseProgress.js)
+- [x] Dashboard multilingue (Overview, Settings, DashboardLayout, AIChat, Platform)
+- [x] Layout côte à côte leçon/carte sur desktop
+- [x] Bouton "Leçon suivante →" après réussite quiz
+- [x] Bug reset état quiz au changement de leçon (key={lesson.id})
+- [x] Déploiement Railway (backend) + Vercel (frontend)
+- [x] CORS fix (trim + remove trailing slash)
+- [x] Logo Safe Haven Money dans Platform et pages auth
