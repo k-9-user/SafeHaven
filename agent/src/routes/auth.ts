@@ -1,6 +1,6 @@
 /**
  * Auth routes
- * POST /api/auth/register              → Créer un compte (envoie un email de vérification)
+ * POST /api/auth/register              → Créer un compte
  * POST /api/auth/login                 → Connexion
  * GET  /api/auth/me                    → Profil (JWT requis)
  * GET  /api/auth/verify-email          → Activer le compte via token email
@@ -10,7 +10,6 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import { resolve as dnsResolve } from 'node:dns/promises';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { findByEmail, createUser, findById, updatePassword, updateUser } from '../auth/users.js';
@@ -43,22 +42,6 @@ const ResetSchema = z.object({
   password: z.string().min(8).max(128),
 });
 
-// ── Vérification MX (email réel) ──────────────────────────────────────────────
-
-async function hasMxRecord(email: string): Promise<boolean> {
-  try {
-    const domain = email.split('@')[1];
-    if (!domain) return false;
-    const records = await dnsResolve(domain, 'MX');
-    return records.length > 0;
-  } catch (err: any) {
-    // ENODATA = domaine sans enregistrement MX / ENOTFOUND = domaine inexistant
-    if (err?.code === 'ENODATA' || err?.code === 'ENOTFOUND') return false;
-    // Erreur réseau → on laisse passer pour ne pas bloquer l'inscription
-    return true;
-  }
-}
-
 // ── POST /api/auth/register ───────────────────────────────────────────────────
 
 authRouter.post('/register', async (req: Request, res: Response): Promise<void> => {
@@ -69,13 +52,6 @@ authRouter.post('/register', async (req: Request, res: Response): Promise<void> 
   }
 
   const { email, password, name } = parsed.data;
-
-  // Vérifie que le domaine de l'email possède un enregistrement MX (email livrable)
-  const validDomain = await hasMxRecord(email);
-  if (!validDomain) {
-    res.status(400).json({ error: 'Adresse email invalide ou inexistante. Utilisez une vraie adresse email.' });
-    return;
-  }
 
   if (findByEmail(email)) {
     res.status(409).json({ error: 'Cet email est déjà utilisé' });
@@ -144,7 +120,7 @@ authRouter.get('/me', requireAuth, (req: AuthRequest, res: Response): void => {
     name: user.name,
     isActive: user.isActive,
     createdAt: user.createdAt,
-    isEmailVerified: user.isEmailVerified ?? true, // anciens comptes = vérifiés
+    isEmailVerified: user.isEmailVerified ?? true,
   });
 });
 
@@ -166,7 +142,6 @@ authRouter.get('/verify-email', (req: Request, res: Response): void => {
   updateUser(userId, { isEmailVerified: true });
   consumeEmailVerifToken(token);
 
-  // Email de bienvenue envoyé une seule fois après confirmation
   const user = findById(userId);
   if (user) {
     sendWelcomeEmail(user.email, user.name).catch((err) =>
@@ -207,7 +182,6 @@ authRouter.post('/forgot-password', async (req: Request, res: Response): Promise
 
   const user = findByEmail(parsed.data.email);
 
-  // Réponse identique qu'il existe ou non (sécurité : pas d'énumération d'emails)
   res.json({ message: 'Si cet email existe, un lien de réinitialisation a été envoyé.' });
 
   if (!user) return;
